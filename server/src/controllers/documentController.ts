@@ -1,10 +1,8 @@
 import { Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../lib/prisma';
 import { AuthRequest } from '../middleware/auth';
 import path from 'path';
 import fs from 'fs';
-
-const prisma = new PrismaClient();
 
 export const getDocuments = async (req: AuthRequest, res: Response): Promise<void> => {
   try {

@@ -61,6 +61,7 @@ export const milestonesApi = {
   list: (projectId: string) => api.get<Milestone[]>(`/projects/${projectId}/milestones`),
   create: (projectId: string, data: object) => api.post<Milestone>(`/projects/${projectId}/milestones`, data),
   update: (projectId: string, milestoneId: string, data: object) => api.put<Milestone>(`/projects/${projectId}/milestones/${milestoneId}`, data),
+  delete: (projectId: string, milestoneId: string) => api.delete(`/projects/${projectId}/milestones/${milestoneId}`),
 };
 
 // Documents
@@ -96,6 +97,7 @@ export const risksApi = {
   list: (projectId: string) => api.get<Risk[]>(`/projects/${projectId}/risks`),
   create: (projectId: string, data: object) => api.post<Risk>(`/projects/${projectId}/risks`, data),
   update: (projectId: string, riskId: string, data: object) => api.put<Risk>(`/projects/${projectId}/risks/${riskId}`, data),
+  delete: (projectId: string, riskId: string) => api.delete(`/projects/${projectId}/risks/${riskId}`),
 };
 
 // NCRs
@@ -103,6 +105,7 @@ export const ncrsApi = {
   list: (projectId: string) => api.get<NCR[]>(`/projects/${projectId}/ncrs`),
   create: (projectId: string, data: object) => api.post<NCR>(`/projects/${projectId}/ncrs`, data),
   update: (projectId: string, ncrId: string, data: object) => api.put<NCR>(`/projects/${projectId}/ncrs/${ncrId}`, data),
+  delete: (projectId: string, ncrId: string) => api.delete(`/projects/${projectId}/ncrs/${ncrId}`),
 };
 
 // Analytics

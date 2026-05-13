@@ -1,9 +1,7 @@
 import { Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../lib/prisma';
 import { AuthRequest } from '../middleware/auth';
 import { getWeekNumber } from '../utils/helpers';
-
-const prisma = new PrismaClient();
 
 // ─── Daily Reports ────────────────────────────────────────────────────────────
 
@@ -496,6 +494,15 @@ export const updateMilestone = async (req: AuthRequest, res: Response): Promise<
   }
 };
 
+export const deleteMilestone = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    await prisma.milestone.delete({ where: { id: req.params.milestoneId } });
+    res.json({ message: 'Milestone deleted' });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to delete milestone' });
+  }
+};
+
 // ─── Risks & NCRs ─────────────────────────────────────────────────────────────
 
 export const getRisks = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -531,6 +538,15 @@ export const updateRisk = async (req: AuthRequest, res: Response): Promise<void>
     res.json(risk);
   } catch (err) {
     res.status(500).json({ message: 'Failed to update risk' });
+  }
+};
+
+export const deleteRisk = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    await prisma.risk.delete({ where: { id: req.params.riskId } });
+    res.json({ message: 'Risk deleted' });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to delete risk' });
   }
 };
 
@@ -570,6 +586,15 @@ export const updateNCR = async (req: AuthRequest, res: Response): Promise<void> 
     res.json(ncr);
   } catch (err) {
     res.status(500).json({ message: 'Failed to update NCR' });
+  }
+};
+
+export const deleteNCR = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    await prisma.nCR.delete({ where: { id: req.params.ncrId } });
+    res.json({ message: 'NCR deleted' });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to delete NCR' });
   }
 };
 

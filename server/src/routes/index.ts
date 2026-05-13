@@ -10,9 +10,9 @@ import {
   getWeeklyReports, generateWeeklyReport, updateWeeklyReport, deleteWeeklyReport,
   getMonthlyReports, generateMonthlyReport, updateMonthlyReport, deleteMonthlyReport,
   getActivities, createActivity, updateActivity, deleteActivity, bulkImportActivities,
-  getMilestones, createMilestone, updateMilestone,
-  getRisks, createRisk, updateRisk,
-  getNCRs, createNCR, updateNCR,
+  getMilestones, createMilestone, updateMilestone, deleteMilestone,
+  getRisks, createRisk, updateRisk, deleteRisk,
+  getNCRs, createNCR, updateNCR, deleteNCR,
 } from '../controllers/reportController';
 import { getDocuments, uploadDocument, deleteDocument, uploadPhoto } from '../controllers/documentController';
 import {
@@ -20,20 +20,25 @@ import {
   getSiteResources, createSiteResource, updateSiteResource, deleteSiteResource,
 } from '../controllers/siteController';
 import { getDashboardStats, getProjectAnalytics, getUserAnalytics } from '../controllers/analyticsController';
+
 import { getUsers, getUser, createUser, updateUser, deleteUser } from '../controllers/userController';
 import { uploadDocument as uploadDocMiddleware, uploadPhoto as uploadPhotoMiddleware } from '../middleware/upload';
+import { authLimiter, apiLimiter } from '../middleware/rateLimit';
 
 export const router = Router();
 
+router.use(apiLimiter);
+
 // Auth
-router.post('/auth/login', login);
-router.post('/auth/register', register);
+router.post('/auth/login', authLimiter, login);
+router.post('/auth/register', authLimiter, register);
 router.get('/auth/profile', authenticate, getProfile);
 router.put('/auth/profile', authenticate, updateProfile);
 
-// Dashboard
+// Dashboard / Analytics
 router.get('/analytics/dashboard', authenticate, getDashboardStats);
 router.get('/analytics/projects/:projectId', authenticate, getProjectAnalytics);
+router.get('/analytics/users', authenticate, getUserAnalytics);
 
 // Projects
 router.get('/projects', authenticate, getProjects);
@@ -76,16 +81,19 @@ router.delete('/projects/:projectId/activities/:activityId', authenticate, delet
 router.get('/projects/:projectId/milestones', authenticate, getMilestones);
 router.post('/projects/:projectId/milestones', authenticate, createMilestone);
 router.put('/projects/:projectId/milestones/:milestoneId', authenticate, updateMilestone);
+router.delete('/projects/:projectId/milestones/:milestoneId', authenticate, deleteMilestone);
 
 // Risks
 router.get('/projects/:projectId/risks', authenticate, getRisks);
 router.post('/projects/:projectId/risks', authenticate, createRisk);
 router.put('/projects/:projectId/risks/:riskId', authenticate, updateRisk);
+router.delete('/projects/:projectId/risks/:riskId', authenticate, deleteRisk);
 
 // NCRs
 router.get('/projects/:projectId/ncrs', authenticate, getNCRs);
 router.post('/projects/:projectId/ncrs', authenticate, createNCR);
 router.put('/projects/:projectId/ncrs/:ncrId', authenticate, updateNCR);
+router.delete('/projects/:projectId/ncrs/:ncrId', authenticate, deleteNCR);
 
 // Plant & Equipment Register
 router.get('/projects/:projectId/plant', authenticate, getPlantEquipment);
