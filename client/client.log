@@ -1,0 +1,14 @@
+
+> construction-tracker-client@1.0.0 dev
+> vite --host 0.0.0.0
+
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+
+  [32m[1mVITE[22m v5.4.21[39m  [2mready in [0m[1m660[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://172.16.6.88:[1m5173[22m/[39m
+(node:10300) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/asus/Desktop/TESTE%20APLICATION/construction-tracker/client/postcss.config.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to C:\Users\asus\Desktop\TESTE APLICATION\construction-tracker\client\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
