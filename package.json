@@ -9,7 +9,7 @@
     "install:all": "npm install && cd server && npm install && cd ../client && npm install",
     "build": "cd server && npm run build && cd ../client && npm run build",
     "postinstall": "cd server && npm install && cd ../client && npm install",
-    "start": "cd server && npx prisma migrate deploy && node dist/index.js",
+    "start": "cd server && npx prisma db push && node dist/index.js",
     "setup": "cd server && npx prisma migrate dev --name init && npx prisma db seed"
   },
   "devDependencies": {
