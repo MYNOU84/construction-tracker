@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# Build output
+dist/
+client/dist/
+server/dist/
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# Database
+server/prisma/*.db
+server/prisma/*.db-journal
+
+# Uploads (user-uploaded files)
+server/uploads/*
+!server/uploads/.gitkeep
+
+# Logs
+*.log
+server/server.log
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Vite cache
+client/.vite/
+client/node_modules/.vite/
