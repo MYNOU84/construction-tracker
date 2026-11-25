@@ -160,11 +160,14 @@ export const getWeeklyReports = async (req: AuthRequest, res: Response): Promise
 export const generateWeeklyReport = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { projectId } = req.params;
-    const { weekNumber, year } = req.body;
+    const weekNumber = toInt(req.body?.weekNumber), year = toInt(req.body?.year);
+    if (!weekNumber || !year || weekNumber < 1 || weekNumber > isoWeeksInYear(year) || year < 2000 || year > 2100) {
+      res.status(400).json({ message: 'Enter a valid ISO week number and year' });
+      return;
+    }
 
     const startDate = getWeekStartDate(weekNumber, year);
-    const endDate = new Date(startDate);
-    endDate.setDate(endDate.getDate() + 6);
+    const endDate = new Date(startDate.getTime() + 7 * DAY_MS - 1); // Monday 00:00 → Sunday 23:59:59.999 UTC
 
     const dailyReports = await prisma.dailyReport.findMany({
       where: { projectId, reportDate: { gte: startDate, lte: endDate } },
@@ -221,10 +224,8 @@ export const generateWeeklyReport = async (req: AuthRequest, res: Response): Pro
 
 export const updateWeeklyReport = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const report = await prisma.weeklyReport.update({
-      where: { id: req.params.reportId },
-      data: req.body,
-    });
+    const data = pickReportFields(req.body, WEEKLY_TEXT, WEEKLY_NUM);
+    const report = await prisma.weeklyReport.update({ where: { id: req.params.reportId }, data });
     res.json(report);
   } catch (err) {
     res.status(500).json({ message: 'Failed to update weekly report' });
@@ -258,10 +259,14 @@ export const getMonthlyReports = async (req: AuthRequest, res: Response): Promis
 export const generateMonthlyReport = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { projectId } = req.params;
-    const { month, year } = req.body;
+    const month = toInt(req.body?.month), year = toInt(req.body?.year);
+    if (!month || !year || month < 1 || month > 12 || year < 2000 || year > 2100) {
+      res.status(400).json({ message: 'Enter a valid month and year' });
+      return;
+    }
 
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0);
+    const startDate = new Date(Date.UTC(year, month - 1, 1));
+    const endDate = new Date(Date.UTC(year, month, 1) - 1); // last day of the month, 23:59:59.999 UTC
 
     const [dailyReports, project, risks, ncrs, milestones, activities] = await Promise.all([
       prisma.dailyReport.findMany({ where: { projectId, reportDate: { gte: startDate, lte: endDate } } }),
@@ -348,10 +353,8 @@ export const generateMonthlyReport = async (req: AuthRequest, res: Response): Pr
 
 export const updateMonthlyReport = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const report = await prisma.monthlyReport.update({
-      where: { id: req.params.reportId },
-      data: req.body,
-    });
+    const data = pickReportFields(req.body, MONTHLY_TEXT, MONTHLY_NUM);
+    const report = await prisma.monthlyReport.update({ where: { id: req.params.reportId }, data });
     res.json(report);
   } catch (err) {
     res.status(500).json({ message: 'Failed to update monthly report' });
@@ -600,13 +603,47 @@ export const deleteNCR = async (req: AuthRequest, res: Response): Promise<void> 
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Integer from a JSON number or numeric string; undefined otherwise. */
+function toInt(v: unknown): number | undefined {
+  const n = typeof v === 'number' ? v : typeof v === 'string' && v.trim() !== '' ? Number(v) : NaN;
+  return Number.isInteger(n) ? n : undefined;
+}
+
+/** Monday 00:00 UTC of ISO week `weekNumber` of `year` (week 1 contains 4 January). Matches the client's week picker. */
 function getWeekStartDate(weekNumber: number, year: number): Date {
-  const jan1 = new Date(year, 0, 1);
-  const dayOfWeek = jan1.getDay();
-  const daysToMonday = (dayOfWeek === 0 ? -6 : 1 - dayOfWeek);
-  const firstMonday = new Date(jan1);
-  firstMonday.setDate(jan1.getDate() + daysToMonday);
-  const start = new Date(firstMonday);
-  start.setDate(firstMonday.getDate() + (weekNumber - 1) * 7);
-  return start;
+  const jan4 = new Date(Date.UTC(year, 0, 4));
+  const week1Monday = jan4.getTime() - ((jan4.getUTCDay() || 7) - 1) * DAY_MS;
+  return new Date(week1Monday + (weekNumber - 1) * 7 * DAY_MS);
+}
+
+function isoWeeksInYear(year: number): number {
+  const dec28 = new Date(Date.UTC(year, 11, 28));
+  const thursday = new Date(dec28.getTime() + (4 - (dec28.getUTCDay() || 7)) * DAY_MS);
+  const yearStart = Date.UTC(thursday.getUTCFullYear(), 0, 1);
+  return Math.ceil(((thursday.getTime() - yearStart) / DAY_MS + 1) / 7);
+}
+
+// Fields a user may edit on a generated report. Identity, period and computed totals stay server-owned.
+const WEEKLY_TEXT = ['executiveSummary', 'highlightsAchieved', 'issuesEncountered', 'nextWeekPlan', 'weatherSummary',
+  'lotsData', 'studiesProgress', 'materialApprovals', 'progressByDiscipline', 'status'];
+const WEEKLY_NUM = ['plannedProgress', 'spi', 'cpi'];
+const MONTHLY_TEXT = ['executiveSummary', 'keyAchievements', 'majorChallenges', 'nextMonthPlan',
+  'studiesProgress', 'materialApprovals', 'photos', 'status'];
+const MONTHLY_NUM = ['plannedProgress', 'architectureProgress', 'structureProgress', 'mecaniqueProgress', 'electriciteProgress',
+  'plomberieProgress', 'infrastructureProgress', 'budgetExpended', 'forecastFinalCost', 'variance'];
+
+function pickReportFields(body: any, text: string[], num: string[]): Record<string, string | number | null> {
+  const out: Record<string, string | number | null> = {};
+  if (!body || typeof body !== 'object') return out;
+  for (const k of text) {
+    if (body[k] === null && k !== 'status') out[k] = null;
+    else if (typeof body[k] === 'string') out[k] = body[k].slice(0, 20000);
+  }
+  for (const k of num) {
+    const n = typeof body[k] === 'string' && body[k].trim() !== '' ? Number(body[k]) : body[k];
+    if (typeof n === 'number' && Number.isFinite(n)) out[k] = n;
+  }
+  return out;
 }

@@ -15,7 +15,8 @@
     "db:demo": "node scripts/demo-db.js",
     "seed:demo": "tsx src/seed-demo.ts",
     "demo:docs": "tsx src/demo/generate-docs.ts",
-    "db:prod-init": "node scripts/prod-db-init.js"
+    "db:prod-init": "node scripts/prod-db-init.js",
+    "owner:init": "node scripts/owner-init.js"
   },
   "dependencies": {
     "@prisma/client": "^5.14.0",

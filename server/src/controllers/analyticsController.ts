@@ -2,13 +2,14 @@ import { Response } from 'express';
 import prisma from '../lib/prisma';
 import { windowStart } from '../lib/clock';
 import { AuthRequest } from '../middleware/auth';
+import { projectScope } from './projectController';
 
 export const getDashboardStats = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user!.userId;
     const role = req.user!.role;
 
-    const projectWhere = role === 'ADMIN' ? {} : { members: { some: { userId } } };
+    const projectWhere = projectScope(req.user!);
     const recentSince = await windowStart(7, { project: projectWhere });
 
     const [projects, totalReports, recentReports] = await Promise.all([

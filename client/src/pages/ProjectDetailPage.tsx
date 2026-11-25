@@ -9,6 +9,7 @@ import { formatDate, formatCurrency, getDisciplineColor, getStatusLabel, getDisc
 import ProgressBar from '../components/ui/ProgressBar';
 import StatusBadge from '../components/ui/StatusBadge';
 import { PageLoader } from '../components/ui/LoadingSpinner';
+import ProjectAdminPanel from '../components/projects/ProjectAdminPanel';
 import {
   Building2, MapPin, Calendar, DollarSign, ClipboardList, Flag,
   Shield, Files, ArrowRight, TrendingUp, Users, CheckCircle2, AlertTriangle
@@ -40,7 +41,7 @@ export default function ProjectDetailPage() {
     { to: 'reports/daily', icon: ClipboardList, label: 'Daily Reports', count: project._count?.dailyReports, color: 'bg-blue-50 text-blue-600' },
     { to: 'schedule', icon: Calendar, label: 'Schedule', count: project._count?.activities, color: 'bg-green-50 text-green-600' },
     { to: 'documents', icon: Files, label: 'Documents', count: project._count?.documents, color: 'bg-purple-50 text-purple-600' },
-    { to: 'risks', icon: Shield, label: 'Risks & NCRs', count: project._count?.ncrs, color: 'bg-red-50 text-red-600' },
+    { to: 'risks', icon: Shield, label: 'Risks & NCRs', count: (project._count?.ncrs ?? 0) + (project._count?.risks ?? 0), color: 'bg-red-50 text-red-600' },
   ];
 
   return (
@@ -88,6 +89,8 @@ export default function ProjectDetailPage() {
           </div>
         </div>
       </div>
+
+      <ProjectAdminPanel project={project} />
 
       {/* Info + Quick Links */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

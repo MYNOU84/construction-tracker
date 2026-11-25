@@ -11,6 +11,7 @@ import EmptyState from '../components/ui/EmptyState';
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Cell, ResponsiveContainer } from 'recharts';
 import { Plus, Shield, AlertTriangle, Edit2, Trash2 } from 'lucide-react';
 import type { Risk, NCR } from '../types';
+import TableExportButtons from '../components/reports/TableExportButtons';
 
 const RISK_COLORS: Record<string, string> = { CRITICAL: '#ef4444', HIGH: '#f97316', MEDIUM: '#eab308', LOW: '#22c55e' };
 
@@ -77,6 +78,31 @@ export default function RisksPage() {
         <div>
           <h1 className="page-title">Risks & NCRs</h1>
           <p className="page-subtitle">Risk register and non-conformance reports</p>
+          <div className="mt-3">
+            <TableExportButtons projectId={projectId} title="Risks & NCRs" fileBase="Risks_NCRs" sections={[
+              { name: 'Risks', rows: risks, columns: [
+                { header: 'Title', value: (r: any) => r.title, width: 40 },
+                { header: 'Category', value: (r: any) => r.category },
+                { header: 'Probability', value: (r: any) => r.probability },
+                { header: 'Impact', value: (r: any) => r.impact },
+                { header: 'Score', value: (r: any) => r.riskScore },
+                { header: 'Status', value: (r: any) => r.status },
+                { header: 'Owner', value: (r: any) => r.owner },
+                { header: 'Due', value: (r: any) => r.dueDate },
+                { header: 'Mitigation', value: (r: any) => r.mitigation, width: 50 }] },
+              { name: 'NCRs', rows: ncrs, columns: [
+                { header: 'NCR #', value: (r: any) => r.ncrNumber },
+                { header: 'Title', value: (r: any) => r.title, width: 40 },
+                { header: 'Severity', value: (r: any) => r.severity },
+                { header: 'Discipline', value: (r: any) => r.discipline },
+                { header: 'Area', value: (r: any) => r.area },
+                { header: 'Raised by', value: (r: any) => r.raisedBy },
+                { header: 'Raised', value: (r: any) => r.raisedDate },
+                { header: 'Status', value: (r: any) => r.status },
+                { header: 'Closed', value: (r: any) => r.closedDate },
+                { header: 'Resolution', value: (r: any) => r.resolution, width: 50 }] }
+            ]} />
+          </div>
         </div>
         <div className="flex gap-2">
           <button onClick={() => { setShowNCRModal(true); resetN(); }} className="btn-secondary">

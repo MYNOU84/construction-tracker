@@ -104,6 +104,7 @@ export default function UsersPage() {
                   <th>Role</th>
                   <th>Company</th>
                   <th>Phone</th>
+                  <th>Projects</th>
                   <th>Reports</th>
                   <th>Status</th>
                   <th>Joined</th>
@@ -137,6 +138,14 @@ export default function UsersPage() {
                     </td>
                     <td className="text-gray-500 text-xs">{u.company || '—'}</td>
                     <td className="text-gray-500 text-xs">{u.phone || '—'}</td>
+                    <td className="text-xs">
+                      {(u as any).projectMembers?.length
+                        ? <div className="flex flex-wrap gap-1 max-w-[260px]">{(u as any).projectMembers.map((pm: any) => (
+                            <span key={pm.project.id} className="badge badge-gray" title={`${pm.project.name} — ${pm.role.replace(/_/g, ' ')}`}>
+                              {pm.project.code} · {pm.role.replace(/_/g, ' ').toLowerCase()}
+                            </span>))}</div>
+                        : <span className="text-gray-400">—</span>}
+                    </td>
                     <td className="text-xs">
                       <span className="badge badge-gray">{(u as any)._count?.dailyReports ?? 0}</span>
                     </td>

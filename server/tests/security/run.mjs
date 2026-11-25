@@ -119,6 +119,17 @@ await db.projectMember.createMany({
     { projectId: B.id, userId: ids.users.consultant, role: 'CONSULTANT' },
   ],
 });
+// A fictional public-demo project (id prefix "demo-"): the only project demo accounts may see.
+ids.projectDemo = (await db.project.create({
+  data: { id: 'demo-sec-fixture', name: 'Security fixture demo project', code: 'SEC-DEMO', client: 'Fixture client', location: 'Nowhere', startDate: new Date('2026-01-01'), endDate: new Date('2026-12-31') },
+})).id;
+await db.projectMember.createMany({
+  data: [
+    { projectId: ids.projectDemo, userId: ids.users.viewer, role: 'CLIENT_VIEWER' },
+    { projectId: ids.projectDemo, userId: ids.users.consultant, role: 'CONSULTANT' },
+  ],
+});
+ids.riskDemo = (await db.risk.create({ data: { projectId: ids.projectDemo, title: 'Fixture demo risk', description: 'fixture' } })).id;
 ids.riskA = (await db.risk.create({ data: { projectId: A.id, title: 'Fixture risk A', description: 'fixture' } })).id;
 ids.riskB = (await db.risk.create({ data: { projectId: B.id, title: 'Fixture risk B', description: 'fixture' } })).id;
 ids.milestoneB = (await db.milestone.create({ data: { projectId: B.id, name: 'Fixture milestone B', plannedDate: new Date('2026-06-01') } })).id;

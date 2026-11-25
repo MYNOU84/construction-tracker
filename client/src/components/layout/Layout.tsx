@@ -4,10 +4,17 @@ import Sidebar from './Sidebar';
 import Header from './Header';
 import Notice from '../ui/Notice';
 import { useUiStore } from '../../store/uiStore';
+import { useAuthStore } from '../../store/authStore';
+import { enableDemoReadOnly } from './demoReadOnly';
+import { Eye } from 'lucide-react';
 
 export default function Layout() {
   const { pathname } = useLocation();
   const { sidebarOpen, setSidebarOpen } = useUiStore();
+  const demo = !!useAuthStore(s => s.user?.demo);
+
+  // Public demo accounts are read-only (enforced by the server); hide write controls in the interface too.
+  useEffect(() => (demo ? enableDemoReadOnly() : undefined), [demo]);
 
   // Close the mobile drawer on navigation
   useEffect(() => { setSidebarOpen(false); }, [pathname, setSidebarOpen]);
@@ -33,6 +40,13 @@ export default function Layout() {
       )}
       <div className="lg:ml-64 flex flex-col min-h-screen min-w-0">
         <Header />
+        {demo && (
+          <div className="px-4 sm:px-6 xl:px-8 py-2 text-xs flex items-center gap-2" role="status"
+            style={{ background: 'var(--accent-soft)', color: 'var(--text-2)', borderBottom: '1px solid var(--border)' }}>
+            <Eye size={14} style={{ color: 'var(--accent)' }} />
+            Public demo — read-only access to fictional projects. You can browse and export; changes are disabled.
+          </div>
+        )}
         <main className="flex-1 p-4 sm:p-6 xl:p-8 min-w-0">
           <div className="mx-auto w-full max-w-[1600px]">
             <Outlet />

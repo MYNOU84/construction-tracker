@@ -1,11 +1,11 @@
 import { Router } from 'express';
 import { authenticate, authorize } from '../middleware/auth';
 import { requireProjectAccess, requireProjectManager, requireChildOfProject, stripProtectedFields } from '../middleware/access';
-import { requireCsrfHeader, demoReadOnly, uploadsAllowed } from '../middleware/guards';
+import { requireCsrfHeader } from '../middleware/guards';
 import { login, register, getProfile, updateProfile, logout, demoLogin, demoAccounts, getAuthConfig } from '../controllers/authController';
 import {
   getProjects, getProject, createProject, updateProject, deleteProject,
-  getProjectStats, addMember, removeMember
+  getProjectStats, addMember, removeMember, getMemberCandidates, exportProject
 } from '../controllers/projectController';
 import {
   getDailyReports, getDailyReport, createDailyReport, updateDailyReport, deleteDailyReport, addComment,
@@ -31,7 +31,6 @@ export const router = Router();
 
 router.use(apiLimiter);
 router.use(requireCsrfHeader);
-router.use(demoReadOnly);
 
 // Shorthands
 const auth = authenticate;
@@ -62,6 +61,8 @@ router.get('/projects/:id', ...P, getProject);
 router.put('/projects/:id', ...P, updateProject);
 router.delete('/projects/:id', auth, requireProjectManager, deleteProject);
 router.get('/projects/:id/stats', ...P, getProjectStats);
+router.get('/projects/:id/export', ...P, exportProject);
+router.get('/projects/:id/member-candidates', auth, requireProjectManager, getMemberCandidates);
 router.post('/projects/:id/members', auth, requireProjectManager, addMember);
 router.delete('/projects/:id/members/:userId', auth, requireProjectManager, removeMember);
 
@@ -124,9 +125,9 @@ router.delete('/projects/:projectId/resources/:itemId', ...P, child('siteResourc
 
 // Documents
 router.get('/projects/:projectId/documents', ...P, getDocuments);
-router.post('/projects/:projectId/documents', ...P, uploadsAllowed, uploadDocMiddleware.single('file'), uploadDocument);
+router.post('/projects/:projectId/documents', ...P, uploadDocMiddleware.single('file'), uploadDocument);
 router.delete('/projects/:projectId/documents/:docId', ...P, child('document', 'docId'), deleteDocument);
-router.post('/photos', authenticate, uploadsAllowed, uploadPhotoMiddleware.single('file'), uploadPhoto);
+router.post('/photos', authenticate, uploadPhotoMiddleware.single('file'), uploadPhoto);
 
 // Users
 const admin = [authenticate, authorize('ADMIN')];

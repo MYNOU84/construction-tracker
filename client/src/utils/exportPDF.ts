@@ -13,7 +13,7 @@ const TRACK: [number, number, number] = [232, 226, 212];
 const RED: [number, number, number] = [220, 38, 38];
 const GREEN: [number, number, number] = [22, 163, 74];
 
-function addHeader(doc: jsPDF, title: string, subtitle: string, project?: Project): number {
+export function addHeader(doc: jsPDF, title: string, subtitle: string, project?: Project): number {
   doc.setFillColor(...NAVY);
   doc.rect(0, 0, 210, 38, 'F');
 
@@ -64,7 +64,7 @@ function addHeader(doc: jsPDF, title: string, subtitle: string, project?: Projec
   return 64;
 }
 
-function addFooter(doc: jsPDF, pageNum: number, totalPages: number) {
+export function addFooter(doc: jsPDF, pageNum: number, totalPages: number) {
   const h = doc.internal.pageSize.height;
   doc.setFillColor(...NAVY);
   doc.rect(0, h - 10, 210, 10, 'F');

@@ -259,15 +259,14 @@ export async function prodChecks(ctx) {
   check('logout cookie also Secure', /bt_token=;/.test(lo.setCookie) && /;\s*Secure/i.test(lo.setCookie));
 }
 
-// ─── Public demo mode (read-only) ────────────────────────────────────────────
+// ─── Public demo (per-account, read-only) ────────────────────────────────────
 export async function demoChecks(ctx) {
   const { base, acct, ids, db, foreignToken } = ctx;
   group('demo');
-  const before = await snapshot(db, acct);
   const cfg = (await session(base).req('GET', '/api/auth/config')).json;
-  check('config: demo on, password login and registration off', cfg.demoMode === true && cfg.passwordLogin === false && cfg.registrationOpen === false);
-  check('password login refused (admin) → 403', (await session(base).req('POST', '/api/auth/login', { email: acct.admin.email, password: acct.admin.password })).status === 403);
-  check('password login refused (viewer) → 403', (await session(base).req('POST', '/api/auth/login', { email: acct.viewer.email, password: acct.viewer.password })).status === 403);
+  check('config: demo on, password login on, registration off', cfg.demoMode === true && cfg.passwordLogin === true && cfg.registrationOpen === false, JSON.stringify(cfg));
+  check('password login refused for an allow-listed demo account (admin) → 403', (await session(base).req('POST', '/api/auth/login', { email: acct.admin.email, password: acct.admin.password })).status === 403);
+  check('password login refused for an allow-listed demo account (viewer) → 403', (await session(base).req('POST', '/api/auth/login', { email: acct.viewer.email, password: acct.viewer.password })).status === 403);
   const list = (await session(base).req('GET', '/api/auth/demo-accounts')).json;
   const emails = Array.isArray(list) ? list.map(a => a.email) : [];
   check('demo accounts: allow-listed, ADMIN filtered out even if listed', emails.length === 2 && emails[0] === acct.viewer.email && emails.includes(acct.consultant.email) && !emails.includes(acct.admin.email), JSON.stringify(list));
@@ -275,11 +274,31 @@ export async function demoChecks(ctx) {
   check('demo sign-in as a non-listed user → 400', (await session(base).req('POST', '/api/auth/demo', { email: acct.pm.email })).status === 400);
   check('token from another deployment (other secret) → 401', (await session(base).req('GET', '/api/auth/profile', undefined, { bearer: foreignToken })).status === 401);
 
+  // A real (non-demo) account signs in with its password and keeps write access (a no-op rename).
+  const pm = session(base);
+  const pl = await pm.req('POST', '/api/auth/login', { email: acct.pm.email, password: acct.pm.password });
+  check('real account password login → 200, not flagged demo', pl.status === 200 && !pl.json.user?.demo, `status=${pl.status}`);
+  const projectAName = (await db.project.findUnique({ where: { id: ids.projectA } })).name;
+  check('real project manager can still write (PUT own project)', (await pm.req('PUT', `/api/projects/${ids.projectA}`, { name: projectAName })).status === 200);
+  const pmList = (await pm.req('GET', '/api/projects')).json;
+  check('real member does not see the demo project', Array.isArray(pmList) && !pmList.some(p => p.id === ids.projectDemo));
+
+  const before = await snapshot(db, acct);
   const v = session(base);
   const d = await v.req('POST', '/api/auth/demo', {});
-  check('default demo sign-in → first allow-listed account', d.status === 200 && d.json.user?.email === acct.viewer.email && d.json.user?.role !== 'ADMIN');
-  check('reads work (projects)', (await v.req('GET', '/api/projects')).status === 200);
-  check('reads work (member project risks)', (await v.req('GET', `/api/projects/${ids.projectA}/risks`)).status === 200);
+  check('default demo sign-in → first allow-listed account, flagged demo', d.status === 200 && d.json.user?.email === acct.viewer.email && d.json.user?.role !== 'ADMIN' && d.json.user?.demo === true, `status=${d.status}`);
+  const vList = (await v.req('GET', '/api/projects')).json;
+  check('demo visitor lists only demo- projects', Array.isArray(vList) && vList.length === 1 && vList[0].id === ids.projectDemo, JSON.stringify(vList?.map?.(p => p.id)));
+  const D = `/api/projects/${ids.projectDemo}`;
+  check('demo reads work (demo project)', (await v.req('GET', D)).status === 200);
+  check('demo reads work (demo project risks)', (await v.req('GET', `${D}/risks`)).status === 200);
+  check('demo export works (demo project)', (await v.req('GET', `${D}/export`)).status === 200);
+  for (const [label, id] of [['A (member)', ids.projectA], ['B', ids.projectB]]) {
+    for (const sub of ['', '/risks', '/export', '/reports/daily', '/documents', '/member-candidates']) {
+      const r = await v.req('GET', `/api/projects/${id}${sub}`);
+      check(`demo visitor → private project ${label}${sub} hidden (404/403)`, r.status === 404 || r.status === 403, `status=${r.status}`);
+    }
+  }
   check('/users still ADMIN-only → 403', (await v.req('GET', '/api/users')).status === 403);
 
   const A = `/api/projects/${ids.projectA}`;
@@ -287,36 +306,45 @@ export async function demoChecks(ctx) {
     ['POST', '/api/projects', { name: 'x', code: 'x', client: 'x', location: 'x', startDate: '2026-01-01', endDate: '2026-12-31' }],
     ['PUT', A, { name: 'demo-hijack' }],
     ['DELETE', A],
+    ['PUT', D, { name: 'demo-hijack' }],
+    ['PUT', D, { presentationData: '{}' }],
+    ['DELETE', D],
     ['POST', `${A}/members`, { userId: ids.users.viewer, role: 'PROJECT_MANAGER' }],
+    ['POST', `${D}/members`, { userId: ids.users.viewer, role: 'PROJECT_MANAGER' }],
     ['DELETE', `${A}/members/${ids.users.engineer}`],
     ['POST', `${A}/risks`, { title: 'x', description: 'x' }],
+    ['POST', `${D}/risks`, { title: 'x', description: 'x' }],
+    ['PUT', `${D}/risks/${ids.riskDemo}`, { title: 'demo-hijack' }],
+    ['DELETE', `${D}/risks/${ids.riskDemo}`],
     ['PUT', `${A}/risks/${ids.riskA}`, { title: 'demo-hijack' }],
     ['DELETE', `${A}/risks/${ids.riskA}`],
-    ['POST', `${A}/reports/daily`, { reportDate: '2026-01-02' }],
-    ['POST', `${A}/reports/weekly/generate`, { weekNumber: 1, year: 2026 }],
-    ['POST', `${A}/activities/bulk`, { activities: [] }],
+    ['POST', `${D}/reports/daily`, { reportDate: '2026-01-02' }],
+    ['POST', `${D}/reports/weekly/generate`, { weekNumber: 1, year: 2026 }],
+    ['POST', `${D}/reports/monthly/generate`, { month: 1, year: 2026 }],
     ['PUT', '/api/auth/profile', { name: 'demo-hijack' }],
     ['POST', '/api/users', { name: 'x', email: 'x@security-test.invalid', password: 'password123', role: 'ADMIN' }],
-    ['POST', '/api/auth/register', { name: 'x', email: 'y@security-test.invalid', password: 'password123' }],
   ];
   for (const [m, p, b] of writes) {
     const r = await v.req(m, p, b);
-    check(`${m} ${p.replace(ids.projectA, ':A')} → 403 (read-only)`, r.status === 403 && r.json.demo === true, `status=${r.status}`);
+    const short = p.replace(ids.projectA, ':A').replace(ids.projectDemo, ':DEMO');
+    check(`${m} ${short} → 403 (read-only)`, r.status === 403 && r.json?.demo === true, `status=${r.status}`);
   }
-  const up = await upload(v, `${A}/documents`, 'file', 'x.pdf', 'application/pdf', '%PDF-1.4');
-  check('document upload → 403 (read-only)', up.status === 403 && up.json.demo === true);
+  const up = await upload(v, `${D}/documents`, 'file', 'x.pdf', 'application/pdf', '%PDF-1.4');
+  check('document upload (demo project) → 403 (read-only)', up.status === 403 && up.json?.demo === true, `status=${up.status}`);
   const ph = await upload(v, '/api/photos', 'file', 'p.png', 'image/png', 'png', { dailyReportId: ids.reportA });
-  check('photo upload → 403 (read-only)', ph.status === 403 && ph.json.demo === true);
-  const override = await v.req('POST', `${A}/risks`, { title: 'x', description: 'x' }, { headers: { 'X-HTTP-Method-Override': 'GET' } });
+  check('photo upload → 403 (read-only)', ph.status === 403 && ph.json?.demo === true, `status=${ph.status}`);
+  const override = await v.req('POST', `${D}/risks`, { title: 'x', description: 'x' }, { headers: { 'X-HTTP-Method-Override': 'GET' } });
   check('method-override header does not bypass read-only', override.status === 403);
-  const caseTrick = await v.req('PUT', `/api/PROJECTS/${ids.projectA}`, { name: 'demo-hijack' });
-  check('path case variation does not bypass read-only', caseTrick.status === 403);
+  const caseTrick = await v.req('PUT', `/api/PROJECTS/${ids.projectDemo}`, { name: 'demo-hijack' });
+  check('path case variation does not bypass read-only', caseTrick.status === 403 || caseTrick.status === 404, `status=${caseTrick.status}`);
 
-  // A full-privilege session cannot write either.
+  // An ADMIN whose e-mail is allow-listed as a demo account is refused outright, even with a valid token.
   const admin = session(base);
   admin.token = ctx.demoAdminToken;
   const aw = await admin.req('PUT', A, { name: 'demo-hijack' });
-  check('even an ADMIN session is read-only in demo mode', aw.status === 403 && aw.json.demo === true, `status=${aw.status}`);
+  check('allow-listed ADMIN token cannot write', aw.status === 403 && aw.json?.demo === true, `status=${aw.status}`);
+  const ar = await admin.req('GET', A);
+  check('allow-listed ADMIN token cannot read private projects', ar.status === 403 || ar.status === 404, `status=${ar.status}`);
   check('logout still allowed', (await v.req('POST', '/api/auth/logout')).status === 200);
 
   const after = await snapshot(db, acct);

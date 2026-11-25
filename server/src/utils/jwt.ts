@@ -18,6 +18,8 @@ export interface TokenPayload {
   role: string;
   /** User.tokenVersion at sign time; bumping it revokes older tokens. */
   tv?: number;
+  /** Set by authenticate (never signed): the account is a read-only demo account. */
+  demo?: boolean;
 }
 
 export const signToken = (payload: TokenPayload): string =>

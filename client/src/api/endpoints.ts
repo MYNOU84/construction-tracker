@@ -22,6 +22,8 @@ export const projectsApi = {
   getStats: (id: string) => api.get(`/projects/${id}/stats`),
   addMember: (id: string, data: object) => api.post(`/projects/${id}/members`, data),
   removeMember: (id: string, userId: string) => api.delete(`/projects/${id}/members/${userId}`),
+  candidates: (id: string) => api.get<{ id: string; name: string; email: string; role: string; company?: string }[]>(`/projects/${id}/member-candidates`),
+  exportAll: (id: string) => api.get(`/projects/${id}/export`),
 };
 
 // Daily Reports

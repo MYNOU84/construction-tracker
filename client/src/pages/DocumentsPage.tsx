@@ -12,6 +12,8 @@ import {
   FileText, Image, File, FileSpreadsheet, Loader2
 } from 'lucide-react';
 import type { Document } from '../types';
+import TableExportButtons from '../components/reports/TableExportButtons';
+import { useAuthStore } from '../store/authStore';
 
 const DOC_ICONS: Record<string, any> = {
   PHOTO: Image, DRAWING: FileText, REPORT: FileSpreadsheet,
@@ -20,6 +22,7 @@ const DOC_ICONS: Record<string, any> = {
 };
 
 export default function DocumentsPage() {
+  const readOnly = !!useAuthStore(s => s.user?.demo);
   const { projectId } = useParams<{ projectId: string }>();
   const qc = useQueryClient();
   const [showUpload, setShowUpload] = useState(false);
@@ -93,6 +96,19 @@ export default function DocumentsPage() {
         <div>
           <h1 className="page-title">Documents</h1>
           <p className="page-subtitle">{documents.length} files — Drawings, RFIs, Permits, Reports</p>
+          <div className="mt-3">
+            <TableExportButtons projectId={projectId} title="Documents Register" fileBase="Documents" sections={[
+              { name: 'Documents', rows: filtered, columns: [
+                { header: 'Name', value: (r: any) => r.name, width: 40 },
+                { header: 'Type', value: (r: any) => r.type },
+                { header: 'Revision', value: (r: any) => r.revision },
+                { header: 'File', value: (r: any) => r.fileName, width: 30 },
+                { header: 'Size (KB)', value: (r: any) => r.fileSize ? Math.round(r.fileSize / 1024) : '' },
+                { header: 'Uploaded by', value: (r: any) => r.uploader?.name },
+                { header: 'Uploaded', value: (r: any) => r.createdAt },
+                { header: 'Description', value: (r: any) => r.description, width: 40 }] }
+            ]} />
+          </div>
         </div>
         <button onClick={() => setShowUpload(true)} className="btn-primary">
           <Upload size={16} /> Upload Document
@@ -123,10 +139,11 @@ export default function DocumentsPage() {
               onClick={() => setTypeFilter(typeFilter === type ? '' : type)}
               onDoubleClick={e => {
                 e.preventDefault();
+                if (readOnly) return;
                 setDirectType(type);
                 setTimeout(() => directRef.current?.click(), 0);
               }}
-              title={`Click to filter · Double-click to upload ${type}`}
+              title={readOnly ? 'Click to filter' : `Click to filter · Double-click to upload ${type}`}
               className={`card-sm flex items-center gap-3 text-left transition-all select-none group ${typeFilter === type ? 'border-primary-500 border' : ''}`}
             >
               <div className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors ${isUploading ? 'bg-primary-100' : 'bg-primary-50 group-hover:bg-primary-100'}`}>
@@ -138,9 +155,9 @@ export default function DocumentsPage() {
               <div>
                 <div className="text-lg font-bold text-gray-900">{count}</div>
                 <div className="text-xs text-gray-500">{type}</div>
-                <div className="text-[10px] text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity leading-tight">
+                {!readOnly && <div className="text-[10px] text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity leading-tight">
                   double-click to upload
-                </div>
+                </div>}
               </div>
             </button>
           );

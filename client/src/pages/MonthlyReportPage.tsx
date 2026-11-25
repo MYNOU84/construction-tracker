@@ -207,9 +207,11 @@ export default function MonthlyReportPage() {
       setSelectedReport(res.data);
       reset();
     },
+    onError: () => {}, // shown in the dialog via generateMutation.error
   });
 
   const updateMutation = useMutation({
+    onError: (err: any) => alert('Save failed: ' + apiError(err)),
     mutationFn: ({ id, data }: { id: string; data: any }) => monthlyReportsApi.update(projectId!, id, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['monthly-reports', projectId] }),
   });
@@ -235,7 +237,7 @@ export default function MonthlyReportPage() {
           <h1 className="page-title">Monthly Reports</h1>
           <p className="page-subtitle">{reports.length} report{reports.length !== 1 ? 's' : ''}</p>
         </div>
-        <button onClick={() => setShowGenerate(true)} className="btn-primary">
+        <button onClick={() => { generateMutation.reset(); setShowGenerate(true); }} className="btn-primary">
           <Plus size={16} /> Generate Monthly Report
         </button>
       </div>
@@ -243,7 +245,7 @@ export default function MonthlyReportPage() {
       {reports.length === 0 ? (
         <EmptyState icon={BarChart2} title="No monthly reports yet"
           description="Generate a monthly progress summary with KPIs and analytics"
-          action={<button onClick={() => setShowGenerate(true)} className="btn-primary">Generate Report</button>}
+          action={<button onClick={() => { generateMutation.reset(); setShowGenerate(true); }} className="btn-primary">Generate Report</button>}
         />
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -298,6 +300,7 @@ export default function MonthlyReportPage() {
           </>
         }>
         <div className="space-y-4">
+          {generateMutation.isError && <p role="alert" className="text-sm text-red-600">{apiError(generateMutation.error)}</p>}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="label">Month</label>
@@ -657,4 +660,8 @@ function MonthlyReportDetail({ report, project, onUpdate }: { report: MonthlyRep
       </div>
     </div>
   );
+}
+
+function apiError(err: any): string {
+  return err?.response?.data?.message || err?.message || 'Request failed';
 }

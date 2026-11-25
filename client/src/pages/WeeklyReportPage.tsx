@@ -46,9 +46,11 @@ export default function WeeklyReportPage() {
       setSelectedReport(res.data);
       reset();
     },
+    onError: () => {}, // shown in the dialog via generateMutation.error
   });
 
   const updateMutation = useMutation({
+    onError: (err: any) => alert('Save failed: ' + apiError(err)),
     mutationFn: ({ id, data }: { id: string; data: any }) => weeklyReportsApi.update(projectId!, id, data),
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ['weekly-reports', projectId] });
@@ -74,7 +76,7 @@ export default function WeeklyReportPage() {
           <h1 className="page-title">Weekly Reports</h1>
           <p className="page-subtitle">{reports.length} report{reports.length !== 1 ? 's' : ''}</p>
         </div>
-        <button onClick={() => setShowGenerate(true)} className="btn-primary">
+        <button onClick={() => { generateMutation.reset(); setShowGenerate(true); }} className="btn-primary">
           <Plus size={16} /> Generate Weekly Report
         </button>
       </div>
@@ -82,7 +84,7 @@ export default function WeeklyReportPage() {
       {reports.length === 0 ? (
         <EmptyState icon={FileText} title="No weekly reports yet"
           description="Generate a weekly summary from your daily reports"
-          action={<button onClick={() => setShowGenerate(true)} className="btn-primary">Generate Report</button>}
+          action={<button onClick={() => { generateMutation.reset(); setShowGenerate(true); }} className="btn-primary">Generate Report</button>}
         />
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -140,6 +142,7 @@ export default function WeeklyReportPage() {
         }>
         <div className="space-y-4">
           <p className="text-sm text-gray-600">Auto-generates a weekly summary from daily reports for the selected week.</p>
+          {generateMutation.isError && <p role="alert" className="text-sm text-red-600">{apiError(generateMutation.error)}</p>}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="label">Week Number</label>
@@ -665,4 +668,8 @@ function getCurrentWeek(): number {
   d.setUTCDate(d.getUTCDate() + 4 - dayNum);
   const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
   return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+}
+
+function apiError(err: any): string {
+  return err?.response?.data?.message || err?.message || 'Request failed';
 }

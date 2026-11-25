@@ -9,6 +9,7 @@ import EmptyState from '../components/ui/EmptyState';
 import Modal from '../components/ui/Modal';
 import { Plus, Edit2, Trash2, Truck, AlertTriangle, Clock, CheckCircle, XCircle } from 'lucide-react';
 import type { PlantEquipment } from '../types';
+import TableExportButtons from '../components/reports/TableExportButtons';
 
 const CATEGORIES = [
   'EARTHMOVING', 'LIFTING', 'CONCRETE', 'TRANSPORT', 'COMPACTION',
@@ -118,6 +119,26 @@ export default function PlantEquipmentPage() {
         <div>
           <h1 className="page-title">Plant & Equipment Register</h1>
           <p className="page-subtitle">Plant & Equipment Site Register — {items.length} items</p>
+          <div className="mt-3">
+            <TableExportButtons projectId={projectId} title="Plant & Equipment Register" fileBase="Plant_Equipment" sections={[
+              { name: 'Plant & equipment', rows: filtered, columns: [
+                { header: 'Name', value: (r: any) => r.name, width: 30 },
+                { header: 'Category', value: (r: any) => r.category },
+                { header: 'Make', value: (r: any) => r.make },
+                { header: 'Model', value: (r: any) => r.model },
+                { header: 'Serial #', value: (r: any) => r.serialNumber },
+                { header: 'Plate #', value: (r: any) => r.plateNumber },
+                { header: 'Owner', value: (r: any) => r.owner },
+                { header: 'Hire company', value: (r: any) => r.hireCompany },
+                { header: 'On site', value: (r: any) => r.dateOnSite },
+                { header: 'Off site', value: (r: any) => r.dateOffSite },
+                { header: 'Status', value: (r: any) => r.status },
+                { header: 'Cert. expiry', value: (r: any) => r.certExpiry },
+                { header: 'Last inspection', value: (r: any) => r.lastInspection },
+                { header: 'Hours', value: (r: any) => r.hoursOnSite },
+                { header: 'Notes', value: (r: any) => r.notes, width: 40 }] }
+            ]} />
+          </div>
         </div>
         <button onClick={openCreate} className="btn-primary">
           <Plus size={16} /> Add Equipment

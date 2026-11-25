@@ -12,6 +12,7 @@ import {
   Cloud, Thermometer, Users
 } from 'lucide-react';
 import type { DailyReport, Project } from '../types';
+import TableExportButtons from '../components/reports/TableExportButtons';
 
 const WEATHER_ICONS: Record<string, string> = {
   SUNNY: '☀️', CLOUDY: '⛅', RAINY: '🌧️', WINDY: '💨',
@@ -57,6 +58,20 @@ export default function DailyReportPage() {
         <div>
           <h1 className="page-title">Daily Reports</h1>
           <p className="page-subtitle">{reports.length} report{reports.length !== 1 ? 's' : ''}</p>
+          <div className="mt-3">
+            <TableExportButtons projectId={projectId} title="Daily Reports Register" fileBase="Daily_Reports" sections={[
+              { name: 'Daily reports', rows: filtered, columns: [
+                { header: 'Report #', value: (r: any) => r.reportNumber },
+                { header: 'Date', value: (r: any) => r.reportDate },
+                { header: 'Week', value: (r: any) => r.weekNumber },
+                { header: 'Weather', value: (r: any) => r.weather },
+                { header: 'Manpower', value: (r: any) => r.totalManpower },
+                { header: 'Incidents', value: (r: any) => r.incidents },
+                { header: 'Status', value: (r: any) => r.status },
+                { header: 'Author', value: (r: any) => r.author?.name },
+                { header: 'Summary', value: (r: any) => r.generalSummary, width: 60 }] }
+            ]} />
+          </div>
         </div>
         <Link to="new" className="btn-primary">
           <Plus size={16} /> New Report

@@ -1,8 +1,9 @@
 import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import { AuthRequest } from '../middleware/auth';
-import { isProjectMember } from '../middleware/access';
-import { UPLOAD_ROOT, DOCUMENT_TYPES, PHOTO_TYPES } from '../middleware/upload';
+import { canAccessProject } from '../middleware/access';
+import { UPLOAD_ROOT, DOCUMENT_TYPES, PHOTO_TYPES, useDatabaseStorage, assignFileName } from '../middleware/upload';
+import { saveStoredFile, readStoredFile, deleteStoredFile } from '../lib/fileStore';
 import path from 'path';
 import fs from 'fs';
 
@@ -35,6 +36,21 @@ const removeFile = (file?: Express.Multer.File) => {
   if (file?.path) fs.promises.unlink(file.path).catch(() => {});
 };
 
+/** Database storage: writes an in-memory upload to the file store. Disk storage: already written by multer. */
+const persist = async (file: Express.Multer.File, kind: 'documents' | 'photos', types: Record<string, string>) => {
+  if (!file.buffer) return;
+  const name = assignFileName(file);
+  await saveStoredFile(kind, name, file.buffer, types[path.extname(name)] || 'application/octet-stream');
+};
+
+/** Removes a stored file from the disk or from the database file store (best effort). */
+const discardStored = async (url: string) => {
+  const m = /^\/uploads\/(documents|photos)\/([A-Za-z0-9-]+\.[A-Za-z0-9]+)$/.exec(url);
+  if (!m) return;
+  if (useDatabaseStorage()) await deleteStoredFile(m[1], m[2]).catch(() => {});
+  else { const abs = resolveStored(url); if (abs) await fs.promises.unlink(abs).catch(() => {}); }
+};
+
 export const getDocuments = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { type } = req.query;
@@ -59,6 +75,7 @@ export const uploadDocument = async (req: AuthRequest, res: Response): Promise<v
     if (!req.file && body.fileUrl !== '#') { res.status(400).json({ message: 'No file uploaded' }); return; }
     const name = str(body.name, 200) || req.file?.originalname || str(body.fileName, 200);
     if (!name) { removeFile(req.file); res.status(400).json({ message: 'A document name is required' }); return; }
+    if (req.file) await persist(req.file, 'documents', DOCUMENT_TYPES);
     const doc = await prisma.document.create({
       data: {
         projectId: req.params.projectId,
@@ -86,9 +103,8 @@ export const deleteDocument = async (req: AuthRequest, res: Response): Promise<v
   try {
     const doc = await prisma.document.findFirst({ where: { id: req.params.docId, projectId: req.params.projectId } });
     if (!doc) { res.status(404).json({ message: 'Document not found' }); return; }
-    const filePath = resolveStored(doc.fileUrl);
     await prisma.document.delete({ where: { id: doc.id } });
-    if (filePath) await fs.promises.unlink(filePath).catch(() => {});
+    await discardStored(doc.fileUrl);
     res.json({ message: 'Document deleted' });
   } catch {
     res.status(500).json({ message: 'Failed to delete document' });
@@ -104,12 +120,13 @@ export const uploadPhoto = async (req: AuthRequest, res: Response): Promise<void
     const parent = dailyReportId
       ? await prisma.dailyReport.findUnique({ where: { id: dailyReportId }, select: { projectId: true } })
       : ncrId ? await prisma.nCR.findUnique({ where: { id: ncrId }, select: { projectId: true } }) : null;
-    const allowed = parent && (req.user!.role === 'ADMIN' || await isProjectMember(req.user!.userId, parent.projectId));
+    const allowed = parent && await canAccessProject(req.user!, parent.projectId);
     if (!allowed) {
       removeFile(req.file);
       res.status(400).json({ message: 'Photos must be attached to a daily report or NCR you can access' });
       return;
     }
+    await persist(req.file, 'photos', PHOTO_TYPES);
     const photo = await prisma.photo.create({
       data: {
         url: `/uploads/photos/${req.file.filename}`,
@@ -153,8 +170,12 @@ export const serveUpload = async (req: Request, res: Response): Promise<void> =>
       projectId = photo?.dailyReport?.projectId ?? photo?.ncr?.projectId;
     }
     if (!projectId) { res.status(404).end(); return; }
-    if (user.role !== 'ADMIN' && !(await isProjectMember(user.userId, projectId))) { res.status(404).end(); return; }
-    if (!fs.existsSync(abs)) { res.status(404).end(); return; }
+    if (!(await canAccessProject(user, projectId))) { res.status(404).end(); return; }
+    let data: Buffer | null = null;
+    if (useDatabaseStorage()) {
+      data = await readStoredFile(kind, file);
+      if (!data) { res.status(404).end(); return; }
+    } else if (!fs.existsSync(abs)) { res.status(404).end(); return; }
 
     const ext = path.extname(abs).toLowerCase();
     const types = kind === 'photos' ? PHOTO_TYPES : DOCUMENT_TYPES;
@@ -168,6 +189,7 @@ export const serveUpload = async (req: Request, res: Response): Promise<void> =>
       : "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox");
     res.setHeader('Cache-Control', 'private, max-age=300');
     res.setHeader('Content-Disposition', `${inline ? 'inline' : 'attachment'}; filename="${path.basename(abs)}"`);
+    if (data) { res.setHeader('Content-Length', String(data.length)); res.end(data); return; }
     fs.createReadStream(abs).on('error', () => res.destroy()).pipe(res);
   } catch {
     res.status(500).end();

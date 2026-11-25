@@ -9,6 +9,7 @@ import EmptyState from '../components/ui/EmptyState';
 import Modal from '../components/ui/Modal';
 import { Plus, Edit2, Trash2, Users, UserCheck, UserX } from 'lucide-react';
 import type { SiteResource } from '../types';
+import TableExportButtons from '../components/reports/TableExportButtons';
 
 const TRADES = [
   'Chef de Chantier / Site Manager', 'Ingénieur Civil / Civil Engineer',
@@ -89,6 +90,19 @@ export default function SiteResourcesPage() {
         <div>
           <h1 className="page-title">Site Resources / Ressources Chantier</h1>
           <p className="page-subtitle">Registre du Personnel de Chantier — {items.length} registered</p>
+          <div className="mt-3">
+            <TableExportButtons projectId={projectId} title="Site Resources" fileBase="Site_Resources" sections={[
+              { name: 'Site resources', rows: filtered, columns: [
+                { header: 'Full name', value: (r: any) => r.fullName, width: 30 },
+                { header: 'Company', value: (r: any) => r.company },
+                { header: 'Trade', value: (r: any) => r.trade },
+                { header: 'Position', value: (r: any) => r.position },
+                { header: 'Type', value: (r: any) => r.type },
+                { header: 'Induction', value: (r: any) => r.inductionDate },
+                { header: 'Status', value: (r: any) => r.status },
+                { header: 'Notes', value: (r: any) => r.notes, width: 40 }] }
+            ]} />
+          </div>
         </div>
         <button onClick={openCreate} className="btn-primary"><Plus size={16} /> Add Resource</button>
       </div>

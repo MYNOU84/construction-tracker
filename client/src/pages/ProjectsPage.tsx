@@ -13,7 +13,7 @@ import { Plus, FolderOpen, MapPin, Calendar, DollarSign, Building2, Search, Tras
 import type { Project } from '../types';
 import { useAuthStore } from '../store/authStore';
 
-const STATUS_OPTIONS = ['PLANNING', 'ACTIVE', 'ON_HOLD', 'COMPLETED', 'CANCELLED'];
+const STATUS_OPTIONS = ['PLANNING', 'ACTIVE', 'ON_HOLD', 'COMPLETED', 'CANCELLED', 'ARCHIVED'];
 
 export default function ProjectsPage() {
   const qc = useQueryClient();
@@ -46,7 +46,8 @@ export default function ProjectsPage() {
 
   const filtered = projects.filter(p => {
     const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.code.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = !statusFilter || p.status === statusFilter;
+    // Archived projects are hidden unless the Archived filter is chosen.
+    const matchStatus = statusFilter ? p.status === statusFilter : p.status !== 'ARCHIVED';
     return matchSearch && matchStatus;
   });
 

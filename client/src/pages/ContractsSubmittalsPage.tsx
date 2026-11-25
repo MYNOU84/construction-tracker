@@ -13,6 +13,8 @@ import {
   ClipboardList, BookOpen, FilePlus, Shield
 } from 'lucide-react';
 import type { Document } from '../types';
+import TableExportButtons from '../components/reports/TableExportButtons';
+import { useAuthStore } from '../store/authStore';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -148,6 +150,7 @@ function UploadModal({
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function ContractsSubmittalsPage() {
+  const readOnly = !!useAuthStore(s => s.user?.demo);
   const { projectId } = useParams<{ projectId: string }>();
   const qc = useQueryClient();
   const [tab, setTab] = useState<'contracts' | 'submittals'>('contracts');
@@ -255,6 +258,18 @@ export default function ContractsSubmittalsPage() {
         <div>
           <h1 className="page-title">Contracts & Submittals</h1>
           <p className="page-subtitle">{docs.length} document{docs.length !== 1 ? 's' : ''}</p>
+          <div className="mt-3">
+            <TableExportButtons projectId={projectId} title="Contracts & Submittals" fileBase="Contracts_Submittals" sections={[
+              { name: 'Contracts & submittals', rows: docs, columns: [
+                { header: 'Name', value: (r: any) => r.name, width: 40 },
+                { header: 'Type', value: (r: any) => r.type },
+                { header: 'Revision', value: (r: any) => r.revision },
+                { header: 'File', value: (r: any) => r.fileName, width: 30 },
+                { header: 'Uploaded by', value: (r: any) => r.uploader?.name },
+                { header: 'Uploaded', value: (r: any) => r.createdAt },
+                { header: 'Description', value: (r: any) => r.description, width: 40 }] }
+            ]} />
+          </div>
         </div>
         <button onClick={() => setShowUpload(true)} className="btn-primary">
           <Plus size={16} /> Add
@@ -287,10 +302,11 @@ export default function ContractsSubmittalsPage() {
                 onClick={() => setFilterType(filterType === t.value ? '' : t.value)}
                 onDoubleClick={e => {
                   e.preventDefault();
+                  if (readOnly) return;
                   setDirectType(t.value);
                   setTimeout(() => directRef.current?.click(), 0);
                 }}
-                title={`Click to filter · Double-click to upload ${t.label}`}
+                title={readOnly ? 'Click to filter' : `Click to filter · Double-click to upload ${t.label}`}
                 className={`card-sm flex items-center gap-3 text-left transition-all select-none group ${filterType === t.value ? 'border-primary-500 border-2' : ''}`}>
                 <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${t.color} transition-colors`}>
                   {isUploading ? <Loader2 size={18} className="animate-spin" /> : <Icon size={18} />}
@@ -298,7 +314,7 @@ export default function ContractsSubmittalsPage() {
                 <div>
                   <div className="text-lg font-bold text-gray-900">{count}</div>
                   <div className="text-xs text-gray-500">{t.label}</div>
-                  <div className="text-[10px] text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity leading-tight">double-click to upload</div>
+                  {!readOnly && <div className="text-[10px] text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity leading-tight">double-click to upload</div>}
                 </div>
               </button>
             );
@@ -318,10 +334,11 @@ export default function ContractsSubmittalsPage() {
                 onClick={() => setFilterType(filterType === t.value ? '' : t.value)}
                 onDoubleClick={e => {
                   e.preventDefault();
+                  if (readOnly) return;
                   setDirectType(t.value);
                   setTimeout(() => directRef.current?.click(), 0);
                 }}
-                title={`Click to filter · Double-click to upload ${t.label}`}
+                title={readOnly ? 'Click to filter' : `Click to filter · Double-click to upload ${t.label}`}
                 className={`card text-left transition-all hover:shadow-card-lg select-none group ${filterType === t.value ? 'border-primary-500 border-2' : ''}`}>
                 <div className="flex items-center gap-3 mb-2">
                   <span className={`p-2 rounded-lg ${t.color}`}>
@@ -330,7 +347,7 @@ export default function ContractsSubmittalsPage() {
                   <span className="font-semibold text-gray-800 text-sm">{t.label}</span>
                 </div>
                 <p className="text-2xl font-black text-gray-900">{count}</p>
-                <p className="text-[10px] text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity mt-1">double-click to upload</p>
+                {!readOnly && <p className="text-[10px] text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity mt-1">double-click to upload</p>}
               </button>
             );
           })}

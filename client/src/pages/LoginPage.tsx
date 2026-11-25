@@ -196,7 +196,7 @@ export default function LoginPage() {
             {config.demoMode && (
               <div className={config.passwordLogin ? 'mt-6 pt-6 border-t' : ''}>
                 <p className="text-sm mb-3" style={{ color: 'var(--text-2)' }}>
-                  This is a read-only public demonstration. All projects, people and documents are fictional.
+                  Public demo: read-only access to two fictional projects (browse and export only). All projects, people and documents are fictional. Owner and team accounts sign in with their own credentials.
                 </p>
                 <div className="grid gap-2">
                   {demoAccounts.map(acc => (

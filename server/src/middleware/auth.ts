@@ -1,12 +1,14 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../lib/prisma';
 import { verifyToken, TokenPayload, tokenMaxAgeMs } from '../utils/jwt';
+import { isDemoAccount } from '../config/security';
 
 export interface AuthRequest extends Request {
   user?: TokenPayload;
 }
 
 export const AUTH_COOKIE = 'bt_token';
+const READ_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 const isProd = () => process.env.NODE_ENV === 'production';
 
 /** Minimal cookie parser (avoids adding a dependency). */
@@ -69,7 +71,13 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
       res.status(401).json({ message: 'Invalid or expired session' });
       return;
     }
-    req.user = { userId: user.id, email: user.email, role: user.role, tv: user.tokenVersion };
+    const demo = isDemoAccount(user.email);
+    // Demo accounts are read-only everywhere (server-side, whatever the UI shows), and never administrators.
+    if (demo && (user.role === 'ADMIN' || !READ_METHODS.has(req.method))) {
+      res.status(403).json({ message: 'Demo accounts are read-only. Changes are disabled.', demo: true });
+      return;
+    }
+    req.user = { userId: user.id, email: user.email, role: user.role, tv: user.tokenVersion, demo };
     next();
   } catch {
     res.status(500).json({ message: 'Authentication failed' });

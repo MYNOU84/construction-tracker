@@ -5,6 +5,7 @@ import { parseJSON, formatDate } from '../utils/helpers';
 import { PageLoader } from '../components/ui/LoadingSpinner';
 import { ShieldCheck, AlertTriangle, Flame, Stethoscope, BookOpen, Clock, Users, AlertOctagon } from 'lucide-react';
 import type { DailyReport, HSEData } from '../types';
+import TableExportButtons from '../components/reports/TableExportButtons';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
@@ -77,6 +78,19 @@ export default function HSEPage() {
               ? 'No daily reports yet — create reports to populate HSE data'
               : `Based on ${reportsWithHSE.length} daily report${reportsWithHSE.length > 1 ? 's' : ''}`}
           </p>
+          <div className="mt-3">
+            <TableExportButtons projectId={projectId} title="HSE Register" fileBase="HSE" sections={[
+              { name: 'HSE by daily report', rows: reportsWithHSE, columns: [
+                { header: 'Report #', value: (r: any) => r.reportNumber },
+                { header: 'Date', value: (r: any) => r.reportDate },
+                { header: 'Manpower', value: (r: any) => r.totalManpower },
+                { header: 'Incidents', value: (r: any) => r.incidents },
+                { header: 'Near misses', value: (r: any) => r.nearMisses },
+                { header: 'Toolbox talks', value: (r: any) => r.toolboxTalks },
+                ...KPI_CONFIG.map(k => ({ header: k.label, value: (r: any) => Number(r.hse?.[k.key]) || 0 })),
+                { header: 'Safety notes', value: (r: any) => r.safetyNotes, width: 50 }] }
+            ]} />
+          </div>
         </div>
       </div>
 

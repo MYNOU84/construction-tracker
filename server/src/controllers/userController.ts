@@ -18,7 +18,11 @@ const optStr = (v: unknown, max: number) => (typeof v === 'string' ? v.slice(0, 
 export const getUsers = async (_req: AuthRequest, res: Response): Promise<void> => {
   try {
     const users = await prisma.user.findMany({
-      select: { ...USER_SELECT, _count: { select: { dailyReports: true } } },
+      select: {
+        ...USER_SELECT,
+        _count: { select: { dailyReports: true } },
+        projectMembers: { select: { role: true, project: { select: { id: true, name: true, code: true } } } },
+      },
       orderBy: { name: 'asc' },
     });
     res.json(users);

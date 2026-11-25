@@ -41,7 +41,7 @@ export const getProgressColor = (_progress: number): string => '';
 export const getStatusColor = (status: string): string => {
   const map: Record<string, string> = {
     ACTIVE: 'badge-green', COMPLETED: 'badge-blue', PLANNING: 'badge-yellow',
-    ON_HOLD: 'badge-orange', CANCELLED: 'badge-red',
+    ON_HOLD: 'badge-orange', CANCELLED: 'badge-red', ARCHIVED: 'badge-gray',
     DRAFT: 'badge-gray', SUBMITTED: 'badge-blue', APPROVED: 'badge-green', REJECTED: 'badge-red',
     NOT_STARTED: 'badge-gray', IN_PROGRESS: 'badge-blue', DELAYED: 'badge-red',
     PENDING: 'badge-yellow', ACHIEVED: 'badge-green', AT_RISK: 'badge-orange',
@@ -55,7 +55,7 @@ export const getStatusColor = (status: string): string => {
 export const getStatusLabel = (status: string): string => {
   const map: Record<string, string> = {
     ACTIVE: 'Active', COMPLETED: 'Completed', PLANNING: 'Planning',
-    ON_HOLD: 'On Hold', CANCELLED: 'Cancelled',
+    ON_HOLD: 'On Hold', CANCELLED: 'Cancelled', ARCHIVED: 'Archived',
     DRAFT: 'Draft', SUBMITTED: 'Submitted', APPROVED: 'Approved', REJECTED: 'Rejected',
     NOT_STARTED: 'Not Started', IN_PROGRESS: 'In Progress', DELAYED: 'Delayed',
     PENDING: 'Pending', ACHIEVED: 'Achieved', AT_RISK: 'At Risk',

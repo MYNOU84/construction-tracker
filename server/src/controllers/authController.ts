@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import prisma from '../lib/prisma';
 import { signToken } from '../utils/jwt';
 import { AuthRequest, setAuthCookie, clearAuthCookie } from '../middleware/auth';
-import { security, MAX_FAILED_LOGINS, LOCKOUT_MINUTES, SELF_REGISTER_ROLES } from '../config/security';
+import { security, isDemoAccount, MAX_FAILED_LOGINS, LOCKOUT_MINUTES, SELF_REGISTER_ROLES } from '../config/security';
 
 const PUBLIC_USER = {
   id: true, name: true, email: true, role: true, company: true, phone: true, avatar: true, createdAt: true,
@@ -21,7 +21,7 @@ const issueSession = async (res: Response, userId: string) => {
   const user = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { ...PUBLIC_USER, tokenVersion: true } });
   const { tokenVersion, ...publicUser } = user;
   setAuthCookie(res, signToken({ userId: user.id, email: user.email, role: user.role, tv: tokenVersion }));
-  return publicUser;
+  return { ...publicUser, demo: isDemoAccount(user.email) };
 };
 
 export const getAuthConfig = (_req: Request, res: Response): void => {
@@ -70,13 +70,19 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
 export const login = async (req: Request, res: Response): Promise<void> => {
   if (!security.passwordLoginEnabled) {
-    res.status(403).json({ message: 'Password sign-in is disabled in the public demo. Use the demo access button.' });
+    res.status(403).json({ message: 'Password sign-in is disabled on this deployment.' });
     return;
   }
   try {
     const { email, password } = req.body ?? {};
     if (typeof email !== 'string' || !email.trim() || typeof password !== 'string' || !password) {
       res.status(400).json({ message: 'Email and password are required' });
+      return;
+    }
+    // Public demo accounts sign in only through the one-click demo access, never with a password.
+    if (isDemoAccount(email.trim())) {
+      await dummyCompare(password);
+      res.status(403).json({ message: 'This is a demo account. Use the demo access buttons.' });
       return;
     }
     const user = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
@@ -157,7 +163,7 @@ export const getProfile = async (req: AuthRequest, res: Response): Promise<void>
   try {
     const user = await prisma.user.findUnique({ where: { id: req.user!.userId }, select: PUBLIC_USER });
     if (!user) { res.status(404).json({ message: 'User not found' }); return; }
-    res.json(user);
+    res.json({ ...user, demo: isDemoAccount(user.email) });
   } catch {
     res.status(500).json({ message: 'Failed to get profile' });
   }

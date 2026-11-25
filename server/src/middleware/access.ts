@@ -12,6 +12,7 @@
 import { Response, NextFunction } from 'express';
 import prisma from '../lib/prisma';
 import { AuthRequest } from './auth';
+import { isDemoProjectId } from '../config/security';
 
 const projectIdFrom = (req: AuthRequest): string | undefined =>
   req.params.projectId || req.params.id;
@@ -22,10 +23,21 @@ export const isProjectMember = async (userId: string, projectId: string) =>
     select: { id: true },
   }));
 
+/**
+ * Can this user see the project? ADMIN: every project. Demo accounts: demo projects only, and only as
+ * members. Everyone else: projects they are a member of.
+ */
+export const canAccessProject = async (user: { userId: string; role: string; demo?: boolean }, projectId: string) => {
+  if (user.demo && !isDemoProjectId(projectId)) return false;
+  if (user.role === 'ADMIN' && !user.demo) return true;
+  return isProjectMember(user.userId, projectId);
+};
+
 export const requireProjectAccess = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const projectId = projectIdFrom(req);
     if (!req.user || !projectId) { res.status(403).json({ message: 'Access denied' }); return; }
+    if (req.user.demo && !isDemoProjectId(projectId)) { res.status(404).json({ message: 'Project not found' }); return; }
     if (req.user.role === 'ADMIN') { next(); return; }
     if (await isProjectMember(req.user.userId, projectId)) { next(); return; }
     // 404 rather than 403 so project ids cannot be probed.
@@ -40,7 +52,8 @@ export const requireProjectManager = async (req: AuthRequest, res: Response, nex
   try {
     const projectId = projectIdFrom(req);
     if (!req.user || !projectId) { res.status(403).json({ message: 'Access denied' }); return; }
-    if (req.user.role === 'ADMIN') { next(); return; }
+    if (req.user.demo && !isDemoProjectId(projectId)) { res.status(404).json({ message: 'Project not found' }); return; }
+    if (req.user.role === 'ADMIN' && !req.user.demo) { next(); return; }
     const m = await prisma.projectMember.findUnique({
       where: { userId_projectId: { userId: req.user.userId, projectId } },
       select: { role: true },

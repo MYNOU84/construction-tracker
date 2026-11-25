@@ -2,6 +2,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { randomUUID } from 'crypto';
+import { security } from '../config/security';
 
 /**
  * Upload folder. Defaults to server/uploads (same folder from src or dist);
@@ -36,7 +37,18 @@ export const PHOTO_TYPES: Record<string, string> = {
 // MIME types that a browser could execute; never accepted whatever the extension.
 const ACTIVE_MIME = /(html|javascript|ecmascript|svg|xml|x-sh|x-msdownload|x-executable)/i;
 
-const createStorage = (subDir: string) =>
+/** Database storage (Vercel): files stay in memory until the controller writes them to the file store. */
+export const useDatabaseStorage = () => security.uploadStorage === 'database';
+// Vercel rejects request bodies above ~4.5 MB, so database-stored uploads are capped at 4 MB.
+const DB_LIMIT = 4 * 1024 * 1024;
+
+/** Gives a memory-stored upload the same random file name a disk upload gets. */
+export const assignFileName = (file: Express.Multer.File) => {
+  if (!file.filename) file.filename = `${randomUUID()}${path.extname(file.originalname).toLowerCase()}`;
+  return file.filename;
+};
+
+const createStorage = (subDir: string) => useDatabaseStorage() ? multer.memoryStorage() :
   multer.diskStorage({
     destination: (_, __, cb) => {
       const dir = path.join(UPLOAD_ROOT, subDir);
@@ -62,12 +74,12 @@ const filterBy = (allowed: Record<string, string>, label: string) =>
 
 export const uploadPhoto = multer({
   storage: createStorage('photos'),
-  limits: { fileSize: 10 * 1024 * 1024, files: 1 },
+  limits: { fileSize: useDatabaseStorage() ? DB_LIMIT : 10 * 1024 * 1024, files: 1 },
   fileFilter: filterBy(PHOTO_TYPES, 'images'),
 });
 
 export const uploadDocument = multer({
   storage: createStorage('documents'),
-  limits: { fileSize: 25 * 1024 * 1024, files: 1 },
+  limits: { fileSize: useDatabaseStorage() ? DB_LIMIT : 25 * 1024 * 1024, files: 1 },
   fileFilter: filterBy(DOCUMENT_TYPES, 'documents'),
 });

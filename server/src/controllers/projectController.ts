@@ -2,7 +2,13 @@ import { Response } from 'express';
 import prisma from '../lib/prisma';
 import { windowStart } from '../lib/clock';
 import { AuthRequest } from '../middleware/auth';
-import { ROLES } from '../config/security';
+import { ROLES, DEMO_PROJECT_PREFIX, isDemoAccount, isDemoProjectId } from '../config/security';
+
+/** Projects a user may list: all for ADMIN, demo projects only for demo accounts, memberships otherwise. */
+export const projectScope = (u: { userId: string; role: string; demo?: boolean }) => ({
+  ...(u.role === 'ADMIN' && !u.demo ? {} : { members: { some: { userId: u.userId } } }),
+  ...(u.demo ? { id: { startsWith: DEMO_PROJECT_PREFIX } } : {}),
+});
 
 // Fields a client may set on a project; everything else (id, members, ...) is ignored.
 const PROJECT_FIELDS = [
@@ -10,6 +16,8 @@ const PROJECT_FIELDS = [
   'startDate', 'endDate', 'status', 'progress', 'budget', 'actualCost', 'currency',
   'imageUrl', 'presentationData',
 ] as const;
+
+export const PROJECT_STATUSES = ['PLANNING', 'ACTIVE', 'ON_HOLD', 'COMPLETED', 'CANCELLED', 'ARCHIVED'];
 
 const pickProjectFields = (body: any) => {
   const out: Record<string, any> = {};
@@ -23,9 +31,7 @@ const pickProjectFields = (body: any) => {
 export const getProjects = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const projects = await prisma.project.findMany({
-      where: req.user!.role === 'ADMIN' ? {} : {
-        members: { some: { userId: req.user!.userId } },
-      },
+      where: projectScope(req.user!),
       include: {
         members: { include: { user: { select: { id: true, name: true, role: true } } } },
         _count: { select: { dailyReports: true, milestones: true, activities: true, documents: true } },
@@ -47,7 +53,7 @@ export const getProject = async (req: AuthRequest, res: Response): Promise<void>
         milestones: { orderBy: { plannedDate: 'asc' } },
         activities: { orderBy: { plannedStart: 'asc' } },
         risks: { orderBy: { riskScore: 'desc' } },
-        _count: { select: { dailyReports: true, activities: true, documents: true, ncrs: true } },
+        _count: { select: { dailyReports: true, activities: true, documents: true, ncrs: true, risks: true } },
       },
     });
     if (!project) { res.status(404).json({ message: 'Project not found' }); return; }
@@ -59,7 +65,12 @@ export const getProject = async (req: AuthRequest, res: Response): Promise<void>
 
 export const createProject = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    if (!['ADMIN', 'PROJECT_MANAGER'].includes(req.user!.role)) {
+      res.status(403).json({ message: 'Only administrators and project managers can create projects' });
+      return;
+    }
     const data = pickProjectFields(req.body);
+    if (!data.name || !data.code) { res.status(400).json({ message: 'Project name and code are required' }); return; }
     const project = await prisma.project.create({
       data: {
         ...(data as any),
@@ -78,6 +89,21 @@ export const createProject = async (req: AuthRequest, res: Response): Promise<vo
 export const updateProject = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const data = pickProjectFields(req.body);
+    // Any member may save the presentation; project details, status and archiving need a manager.
+    const keys = Object.keys(data);
+    if (keys.some(k => k !== 'presentationData') && req.user!.role !== 'ADMIN') {
+      const m = await prisma.projectMember.findUnique({
+        where: { userId_projectId: { userId: req.user!.userId, projectId: req.params.id } }, select: { role: true },
+      });
+      if (m?.role !== 'PROJECT_MANAGER') {
+        res.status(403).json({ message: 'Only the project manager or an administrator can edit project details' });
+        return;
+      }
+    }
+    if (data.status !== undefined && !PROJECT_STATUSES.includes(data.status)) {
+      res.status(400).json({ message: 'Invalid project status' });
+      return;
+    }
     const project = await prisma.project.update({ where: { id: req.params.id }, data });
     res.json(project);
   } catch (err) {
@@ -144,8 +170,13 @@ export const addMember = async (req: AuthRequest, res: Response): Promise<void> 
       res.status(400).json({ message: 'A valid userId and role are required' });
       return;
     }
-    const exists = await prisma.user.findUnique({ where: { id: userId }, select: { isActive: true } });
+    const exists = await prisma.user.findUnique({ where: { id: userId }, select: { isActive: true, email: true } });
     if (!exists?.isActive) { res.status(404).json({ message: 'User not found' }); return; }
+    // Public demo accounts never get access to private (non-demo) projects.
+    if (isDemoAccount(exists.email) && !isDemoProjectId(req.params.id)) {
+      res.status(400).json({ message: 'Demo accounts can only be members of demo projects' });
+      return;
+    }
     const member = await prisma.projectMember.upsert({
       where: { userId_projectId: { userId, projectId: req.params.id } },
       create: { userId, projectId: req.params.id, role },
@@ -165,5 +196,63 @@ export const removeMember = async (req: AuthRequest, res: Response): Promise<voi
     res.json({ message: 'Member removed' });
   } catch (err) {
     res.status(500).json({ message: 'Failed to remove member' });
+  }
+};
+
+/**
+ * GET /projects/:id/member-candidates (project manager or administrator): active users that can be added.
+ * Private projects never offer public demo accounts; demo projects offer only demo accounts.
+ */
+export const getMemberCandidates = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const demoProject = isDemoProjectId(req.params.id);
+    const users = await prisma.user.findMany({
+      where: { isActive: true },
+      select: { id: true, name: true, email: true, role: true, company: true },
+      orderBy: { name: 'asc' },
+    });
+    res.json(users.filter(u => isDemoAccount(u.email) === demoProject));
+  } catch {
+    res.status(500).json({ message: 'Failed to fetch users' });
+  }
+};
+
+/**
+ * GET /projects/:id/export: every record of one project, for the complete project export (Excel / JSON).
+ * Same access rule as viewing the project. Passwords and session data are never included.
+ */
+export const exportProject = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const projectId = req.params.id;
+    const user = { select: { id: true, name: true, email: true } } as const;
+    const where = { projectId };
+    const [project, members, activities, milestones, dailyReports, weeklyReports, monthlyReports, risks, ncrs, plant, resources, documents] = await Promise.all([
+      prisma.project.findUnique({ where: { id: projectId } }),
+      prisma.projectMember.findMany({ where, include: { user: { select: { name: true, email: true, role: true, company: true } } } }),
+      prisma.activity.findMany({ where, orderBy: { plannedStart: 'asc' } }),
+      prisma.milestone.findMany({ where, orderBy: { plannedDate: 'asc' } }),
+      prisma.dailyReport.findMany({ where, orderBy: { reportDate: 'asc' }, include: {
+        author: user,
+        photos: { select: { id: true, fileName: true, caption: true, location: true, url: true, takenAt: true } },
+        comments: { select: { id: true, content: true, createdAt: true, user: { select: { name: true } } } },
+      } }),
+      prisma.weeklyReport.findMany({ where, orderBy: [{ year: 'asc' }, { weekNumber: 'asc' }] }),
+      prisma.monthlyReport.findMany({ where, orderBy: [{ year: 'asc' }, { month: 'asc' }] }),
+      prisma.risk.findMany({ where }),
+      prisma.nCR.findMany({ where }),
+      prisma.plantEquipment.findMany({ where }),
+      prisma.siteResource.findMany({ where }),
+      prisma.document.findMany({ where, include: { uploader: user } }),
+    ]);
+    if (!project) { res.status(404).json({ message: 'Project not found' }); return; }
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({
+      exportedAt: new Date().toISOString(),
+      project, members, activities, milestones, dailyReports, weeklyReports, monthlyReports,
+      risks, ncrs, plant, resources, documents,
+    });
+  } catch (err) {
+    console.error('[exportProject]', err);
+    res.status(500).json({ message: 'Failed to export project' });
   }
 };

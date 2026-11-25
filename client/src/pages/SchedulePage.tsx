@@ -14,6 +14,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine
 } from 'recharts';
 import type { Activity, Milestone } from '../types';
+import TableExportButtons from '../components/reports/TableExportButtons';
 
 type Tab = 'activities' | 'milestones' | 'gantt' | 'analyse' | 'documents';
 
@@ -167,6 +168,29 @@ export default function SchedulePage() {
         <div>
           <h1 className="page-title">Schedule & Tasks</h1>
           <p className="page-subtitle">Overall schedule and activity tracking</p>
+          <div className="mt-3">
+            <TableExportButtons projectId={projectId} title="Schedule & Tasks" fileBase="Schedule" sections={[
+              { name: 'Activities', rows: activities, columns: [
+                { header: 'WBS', value: (r: any) => r.wbsCode },
+                { header: 'Activity', value: (r: any) => r.name, width: 50 },
+                { header: 'Discipline', value: (r: any) => r.discipline },
+                { header: 'Area', value: (r: any) => r.area },
+                { header: 'Planned start', value: (r: any) => r.plannedStart },
+                { header: 'Planned end', value: (r: any) => r.plannedEnd },
+                { header: 'Actual start', value: (r: any) => r.actualStart },
+                { header: 'Actual end', value: (r: any) => r.actualEnd },
+                { header: 'Planned %', value: (r: any) => r.plannedProgress },
+                { header: 'Actual %', value: (r: any) => r.actualProgress },
+                { header: 'Status', value: (r: any) => r.status },
+                { header: 'Priority', value: (r: any) => r.priority }] },
+              { name: 'Milestones', rows: milestones, columns: [
+                { header: 'Milestone', value: (r: any) => r.name, width: 50 },
+                { header: 'Planned date', value: (r: any) => r.plannedDate },
+                { header: 'Actual date', value: (r: any) => r.actualDate },
+                { header: 'Status', value: (r: any) => r.status },
+                { header: 'Description', value: (r: any) => r.description, width: 50 }] }
+            ]} />
+          </div>
         </div>
         <div className="flex gap-2">
           <button onClick={() => setShowImportModal(true)} className="btn-secondary flex items-center gap-2">

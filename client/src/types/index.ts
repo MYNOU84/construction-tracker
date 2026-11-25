@@ -10,9 +10,12 @@ export interface User {
   avatar?: string;
   isActive: boolean;
   createdAt: string;
+  /** Public demo account: read-only, limited to the fictional demo projects. */
+  demo?: boolean;
+  projectMembers?: { role: string; project: { id: string; name: string; code: string } }[];
 }
 
-export type ProjectStatus = 'PLANNING' | 'ACTIVE' | 'ON_HOLD' | 'COMPLETED' | 'CANCELLED';
+export type ProjectStatus = 'PLANNING' | 'ACTIVE' | 'ON_HOLD' | 'COMPLETED' | 'CANCELLED' | 'ARCHIVED';
 
 export interface Project {
   id: string;
@@ -33,7 +36,7 @@ export interface Project {
   imageUrl?: string;
   presentationData?: string;
   members?: ProjectMember[];
-  _count?: { dailyReports: number; milestones: number; activities: number; documents: number; ncrs: number };
+  _count?: { dailyReports: number; milestones: number; activities: number; documents: number; ncrs: number; risks?: number };
   milestones?: Milestone[];
   activities?: Activity[];
   risks?: Risk[];
