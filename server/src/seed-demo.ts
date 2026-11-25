@@ -31,7 +31,8 @@ export function demoDatabaseUrl(): string {
   return url;
 }
 
-// Local development accounts mirror src/seed.ts; new demo accounts get DEMO_PASSWORD or a random one.
+// Local development accounts mirror src/seed.ts. They are used only for local SQLite demo databases:
+// a hosted (PostgreSQL) target never receives known passwords; it gets DEMO_PASSWORD or a random one.
 const LOCAL_DEV_PASSWORDS: Record<string, string> = {
   admin: 'admin123', pm: 'pm123456', engineer: 'eng12345', consultant: 'cons1234',
 };
@@ -57,12 +58,12 @@ async function upsertAll(model: any, rows: Row[]) {
   }
 }
 
-export async function seedDemo(prisma: PrismaClient, data: DemoData) {
+export async function seedDemo(prisma: PrismaClient, data: DemoData, localTarget = true) {
   // ── users ──
   const ids = new Map<string, string>();
   const stamp = new Date(Date.UTC(2025, 0, 6, 8)); // fixed timestamps keep re-runs byte-identical
   for (const u of data.users) {
-    const pw = (u.existing ? LOCAL_DEV_PASSWORDS[u.key] : undefined) ?? process.env.DEMO_PASSWORD ?? randomBytes(18).toString('base64url');
+    const pw = (u.existing && localTarget ? LOCAL_DEV_PASSWORDS[u.key] : undefined) ?? process.env.DEMO_PASSWORD ?? randomBytes(18).toString('base64url');
     const profile = { name: u.name, role: u.role, company: u.company, phone: u.phone, isActive: true, updatedAt: stamp };
     const existing = await prisma.user.findUnique({ where: { email: u.email }, select: { id: true } });
     if (existing) {
@@ -132,7 +133,7 @@ async function main() {
   const anchor = resolveAnchor(process.env.DEMO_ANCHOR);
   const prisma = new PrismaClient({ datasources: { db: { url } } });
   try {
-    const summary = await seedDemo(prisma, buildDemo(anchor));
+    const summary = await seedDemo(prisma, buildDemo(anchor), url.startsWith('file:'));
     console.log(`Demo data seeded (anchor ${anchor}, fictional projects only).`);
     console.table(summary);
   } finally {

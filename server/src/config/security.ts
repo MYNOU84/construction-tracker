@@ -20,6 +20,8 @@ export const security = {
       .split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
   },
   get passwordLoginEnabled() { return !flag('DEMO_MODE') || flag('ALLOW_PASSWORD_LOGIN'); },
+  /** Disk uploads: off in DEMO_MODE and on Vercel (read-only, ephemeral filesystem; no paid storage). */
+  get uploadsEnabled() { return !flag('DEMO_MODE') && !process.env.VERCEL; },
   get registrationOpen() {
     if (flag('DEMO_MODE')) return false;
     return !isProd() || flag('ALLOW_REGISTRATION');

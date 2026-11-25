@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authenticate, authorize } from '../middleware/auth';
 import { requireProjectAccess, requireProjectManager, requireChildOfProject, stripProtectedFields } from '../middleware/access';
-import { requireCsrfHeader, demoReadOnly } from '../middleware/guards';
+import { requireCsrfHeader, demoReadOnly, uploadsAllowed } from '../middleware/guards';
 import { login, register, getProfile, updateProfile, logout, demoLogin, demoAccounts, getAuthConfig } from '../controllers/authController';
 import {
   getProjects, getProject, createProject, updateProject, deleteProject,
@@ -124,9 +124,9 @@ router.delete('/projects/:projectId/resources/:itemId', ...P, child('siteResourc
 
 // Documents
 router.get('/projects/:projectId/documents', ...P, getDocuments);
-router.post('/projects/:projectId/documents', ...P, uploadDocMiddleware.single('file'), uploadDocument);
+router.post('/projects/:projectId/documents', ...P, uploadsAllowed, uploadDocMiddleware.single('file'), uploadDocument);
 router.delete('/projects/:projectId/documents/:docId', ...P, child('document', 'docId'), deleteDocument);
-router.post('/photos', authenticate, uploadPhotoMiddleware.single('file'), uploadPhoto);
+router.post('/photos', authenticate, uploadsAllowed, uploadPhotoMiddleware.single('file'), uploadPhoto);
 
 // Users
 const admin = [authenticate, authorize('ADMIN')];

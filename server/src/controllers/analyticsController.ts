@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import prisma from '../lib/prisma';
+import { windowStart } from '../lib/clock';
 import { AuthRequest } from '../middleware/auth';
 
 export const getDashboardStats = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -8,6 +9,7 @@ export const getDashboardStats = async (req: AuthRequest, res: Response): Promis
     const role = req.user!.role;
 
     const projectWhere = role === 'ADMIN' ? {} : { members: { some: { userId } } };
+    const recentSince = await windowStart(7, { project: projectWhere });
 
     const [projects, totalReports, recentReports] = await Promise.all([
       prisma.project.findMany({
@@ -20,7 +22,7 @@ export const getDashboardStats = async (req: AuthRequest, res: Response): Promis
       prisma.dailyReport.findMany({
         where: {
           project: projectWhere,
-          reportDate: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+          reportDate: { gte: recentSince },
         },
         orderBy: { reportDate: 'asc' },
       }),
@@ -65,7 +67,7 @@ export const getProjectAnalytics = async (req: AuthRequest, res: Response): Prom
     const { projectId } = req.params;
     const { period = '30' } = req.query;
     const days = parseInt(String(period));
-    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    const since = await windowStart(Number.isFinite(days) && days > 0 ? days : 30, { projectId });
 
     const [reports, activities, milestones, risks, ncrs] = await Promise.all([
       prisma.dailyReport.findMany({

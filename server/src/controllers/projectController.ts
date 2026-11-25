@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import prisma from '../lib/prisma';
+import { windowStart } from '../lib/clock';
 import { AuthRequest } from '../middleware/auth';
 import { ROLES } from '../config/security';
 
@@ -96,12 +97,13 @@ export const deleteProject = async (req: AuthRequest, res: Response): Promise<vo
 export const getProjectStats = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const projectId = req.params.id;
+    const since30 = await windowStart(30, { projectId });
     const [project, reports30, activities, milestones] = await Promise.all([
       prisma.project.findUnique({ where: { id: projectId } }),
       prisma.dailyReport.findMany({
         where: {
           projectId,
-          reportDate: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
+          reportDate: { gte: since30 },
         },
         orderBy: { reportDate: 'asc' },
       }),

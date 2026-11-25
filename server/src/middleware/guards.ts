@@ -21,3 +21,9 @@ export const demoReadOnly = (req: Request, res: Response, next: NextFunction): v
   if (!security.demoMode || SAFE_METHODS.has(req.method) || DEMO_WRITABLE.has(req.path)) { next(); return; }
   res.status(403).json({ message: 'This public demo is read-only. Changes are disabled.', demo: true });
 };
+
+/** Rejects uploads before multer touches the filesystem when uploads are disabled (demo / Vercel). */
+export const uploadsAllowed = (_req: Request, res: Response, next: NextFunction): void => {
+  if (security.uploadsEnabled) { next(); return; }
+  res.status(403).json({ message: 'File uploads are disabled on this deployment.', demo: security.demoMode });
+};

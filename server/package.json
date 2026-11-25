@@ -14,7 +14,8 @@
     "test:security": "tsc && node tests/security/run.mjs",
     "db:demo": "node scripts/demo-db.js",
     "seed:demo": "tsx src/seed-demo.ts",
-    "demo:docs": "tsx src/demo/generate-docs.ts"
+    "demo:docs": "tsx src/demo/generate-docs.ts",
+    "db:prod-init": "node scripts/prod-db-init.js"
   },
   "dependencies": {
     "@prisma/client": "^5.14.0",

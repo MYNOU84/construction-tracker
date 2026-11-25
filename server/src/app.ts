@@ -46,8 +46,9 @@ app.get('/api/health', async (_: Request, res: Response) => {
   }
 });
 
-// Serve React app in production (client/dist relative to project root)
-if (isProd) {
+// Serve React app in production (client/dist relative to project root).
+// On Vercel the build output is served by the CDN (vercel.json), so the function only handles the API.
+if (isProd && !process.env.VERCEL) {
   const clientDist = path.join(__dirname, '..', '..', 'client', 'dist');
   app.use(express.static(clientDist));
   app.get('*', (_req, res) => res.sendFile(path.join(clientDist, 'index.html')));

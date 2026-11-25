@@ -1,0 +1,10 @@
+server/prisma/*.db
+server/prisma/*.db-journal
+server/prisma/backups/
+server/uploads/
+server/dist/
+**/.env
+**/.env.*
+!server/.env.example
+SESSION_*.md
+TRANSLATION_SESSION.md
