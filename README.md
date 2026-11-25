@@ -154,6 +154,15 @@ npm run test:security
 
 Latest results: [server/tests/security/RESULTS.md](server/tests/security/RESULTS.md).
 
+Dependency and export regression checks (offline, no database):
+
+```bash
+npm run test:deps      # removed packages stay removed, patched versions stay installed
+npm run test:exports   # every PDF and Excel export against fictional fixtures
+```
+
+Dependency audit, versions and residual risks: [docs/WP2-DEPENDENCIES.md](docs/WP2-DEPENDENCIES.md).
+
 ---
 
 ## Tech Stack
@@ -164,13 +173,13 @@ Latest results: [server/tests/security/RESULTS.md](server/tests/security/RESULTS
 | UI | Tailwind CSS (custom design system) |
 | Charts | Recharts |
 | State | Zustand + React Query |
-| Forms | React Hook Form + Zod |
+| Forms | React Hook Form |
 | Backend | Node.js + Express + TypeScript |
 | Database | SQLite (via Prisma ORM) |
 | Auth | JWT + bcryptjs |
 | Files | Multer |
 | PDF | jsPDF + jspdf-autotable |
-| Excel | xlsx (SheetJS) |
+| Excel | ExcelJS |
 
 ---
 

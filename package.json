@@ -10,7 +10,9 @@
           "build": "cd server && npm run build && cd ../client && npm run build",
           "postinstall": "cd server && npm install && cd ../client && npm install",
           "start": "cd server && node scripts/db-sync.js && node dist/seed-once.js && node dist/index.js",
-          "setup": "cd server && npx prisma migrate dev --name init && npx prisma db seed"
+          "setup": "cd server && npx prisma migrate dev --name init && npx prisma db seed",
+          "test:deps": "node scripts/check-deps.mjs",
+          "test:exports": "cd client && npm run test:exports"
     },
     "devDependencies": {
           "concurrently": "^8.2.2"
