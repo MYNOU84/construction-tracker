@@ -7,6 +7,9 @@ export const authApi = {
   register: (data: object) => api.post('/auth/register', data),
   getProfile: () => api.get<User>('/auth/profile'),
   updateProfile: (data: object) => api.put<User>('/auth/profile', data),
+  config: () => api.get<{ demoMode: boolean; passwordLogin: boolean; registrationOpen: boolean }>('/auth/config'),
+  demoAccounts: () => api.get<{ email: string; name: string; role: string }[]>('/auth/demo-accounts'),
+  demoLogin: (email: string) => api.post<{ user: User }>('/auth/demo', { email }),
 };
 
 // Projects

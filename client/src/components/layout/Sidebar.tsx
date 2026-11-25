@@ -11,7 +11,7 @@ const mainNav = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard', exact: true },
   { to: '/projects', icon: FolderOpen, label: 'Projects' },
   { to: '/analytics', icon: TrendingUp, label: 'Analytics' },
-  { to: '/users', icon: Users, label: 'Users', roles: ['ADMIN', 'PROJECT_MANAGER'] },
+  { to: '/users', icon: Users, label: 'Users', roles: ['ADMIN'] },
 ];
 
 const projectNav = [

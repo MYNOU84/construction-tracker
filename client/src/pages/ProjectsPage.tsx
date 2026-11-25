@@ -11,6 +11,7 @@ import { PageLoader } from '../components/ui/LoadingSpinner';
 import EmptyState from '../components/ui/EmptyState';
 import { Plus, FolderOpen, MapPin, Calendar, DollarSign, Building2, Search, Trash2, Edit2 } from 'lucide-react';
 import type { Project } from '../types';
+import { useAuthStore } from '../store/authStore';
 
 const STATUS_OPTIONS = ['PLANNING', 'ACTIVE', 'ON_HOLD', 'COMPLETED', 'CANCELLED'];
 
@@ -36,6 +37,12 @@ export default function ProjectsPage() {
     mutationFn: (id: string) => projectsApi.delete(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['projects'] }),
   });
+
+  const { user } = useAuthStore();
+  // Mirrors the server rule: ADMIN, or a project member holding the PROJECT_MANAGER role.
+  const canDelete = (project: Project) =>
+    user?.role === 'ADMIN' ||
+    !!project.members?.some(m => m.userId === user?.id && m.role === 'PROJECT_MANAGER');
 
   const filtered = projects.filter(p => {
     const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.code.toLowerCase().includes(search.toLowerCase());
@@ -82,7 +89,7 @@ export default function ProjectsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
           {filtered.map((project) => (
             <ProjectCard key={project.id} project={project}
-              onDelete={() => {
+              onDelete={!canDelete(project) ? undefined : () => {
                 if (confirm(`Delete project "${project.name}"? This action cannot be undone.`))
                   deleteMutation.mutate(project.id);
               }}
@@ -172,7 +179,7 @@ export default function ProjectsPage() {
   );
 }
 
-function ProjectCard({ project, onDelete }: { project: Project; onDelete: () => void }) {
+function ProjectCard({ project, onDelete }: { project: Project; onDelete?: () => void }) {
   const navigate = useNavigate();
   const daysLeft = Math.ceil((new Date(project.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
   const isOverdue = daysLeft < 0;
@@ -183,12 +190,12 @@ function ProjectCard({ project, onDelete }: { project: Project; onDelete: () => 
       onClick={() => navigate(`/projects/${project.id}`)}>
 
       {/* Delete button — stops propagation so it doesn't navigate */}
-      <button
+      {onDelete && <button
         onClick={(e) => { e.stopPropagation(); onDelete(); }}
         className="absolute top-3 right-3 p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100 z-10"
         title="Delete project">
         <Trash2 size={14} />
-      </button>
+      </button>}
 
       {/* Header */}
       <div className="flex items-start justify-between mb-3 pr-6">

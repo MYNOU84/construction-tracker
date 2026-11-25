@@ -1,10 +1,23 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Building2, Lock, Mail, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Building2, Lock, Mail, Eye, EyeOff, AlertCircle, PlayCircle } from 'lucide-react';
 import { authApi } from '../api/endpoints';
 import { useAuthStore } from '../store/authStore';
 
 interface LoginForm { email: string; password: string; }
+interface AuthConfig { demoMode: boolean; passwordLogin: boolean; registrationOpen: boolean }
+interface DemoAccount { email: string; name: string; role: string }
+
+// Seeded local accounts, offered as one-click fill-ins in development builds only.
+// Production builds never ship these credentials.
+const DEV_ACCOUNTS = import.meta.env.DEV ? [
+  { label: 'Admin', email: 'admin@buildtrack.com', pw: 'admin123' },
+  { label: 'PM', email: 'pm@buildtrack.com', pw: 'pm123456' },
+  { label: 'Engineer', email: 'engineer@buildtrack.com', pw: 'eng12345' },
+  { label: 'Consultant', email: 'consultant@buildtrack.com', pw: 'cons1234' },
+] : [];
+
+const roleLabel = (r: string) => r.split('_').map(w => w[0] + w.slice(1).toLowerCase()).join(' ');
 
 export default function LoginPage() {
   const { login } = useAuthStore();
@@ -12,14 +25,37 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const [config, setConfig] = useState<AuthConfig>({ demoMode: false, passwordLogin: true, registrationOpen: false });
+  const [demoAccounts, setDemoAccounts] = useState<DemoAccount[]>([]);
+
   const { register, handleSubmit, setValue, formState: { errors } } = useForm<LoginForm>();
+
+  useEffect(() => {
+    authApi.config().then(r => {
+      setConfig(r.data);
+      if (r.data.demoMode) authApi.demoAccounts().then(a => setDemoAccounts(a.data)).catch(() => {});
+    }).catch(() => {});
+  }, []);
+
+  const enterDemo = async (email: string) => {
+    setError('');
+    setLoading(true);
+    try {
+      const res = await authApi.demoLogin(email);
+      login(res.data.user);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Demo sign-in failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const onSubmit = async (data: LoginForm) => {
     setError('');
     setLoading(true);
     try {
       const res = await authApi.login(data);
-      login(res.data.user, res.data.token);
+      login(res.data.user);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Login failed. Please try again.');
     } finally {
@@ -51,7 +87,7 @@ export default function LoginPage() {
 
         {/* Card */}
         <div className="bg-white rounded-2xl shadow-2xl p-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Sign in to your account</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-6">{config.passwordLogin ? 'Sign in to your account' : 'Explore the demo'}</h2>
 
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700 text-sm">
@@ -60,6 +96,7 @@ export default function LoginPage() {
             </div>
           )}
 
+          {config.passwordLogin && (
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div>
               <label className="label">Email Address</label>
@@ -102,28 +139,48 @@ export default function LoginPage() {
               ) : 'Sign In'}
             </button>
           </form>
+          )}
 
-          {/* Demo accounts */}
-          <div className="mt-6 pt-6 border-t border-gray-100">
-            <p className="text-xs text-gray-500 text-center mb-3">Demo Accounts</p>
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                { label: 'Admin', email: 'admin@buildtrack.com', pw: 'admin123' },
-                { label: 'PM', email: 'pm@buildtrack.com', pw: 'pm123456' },
-                { label: 'Engineer', email: 'engineer@buildtrack.com', pw: 'eng12345' },
-                { label: 'Consultant', email: 'consultant@buildtrack.com', pw: 'cons1234' },
-              ].map(acc => (
-                <button key={acc.label} type="button"
-                  onClick={() => fillDemo(acc.email, acc.pw)}
-                  className="btn-secondary btn-sm text-xs justify-start gap-2">
-                  <span className="w-4 h-4 bg-primary-100 text-primary-700 rounded text-xs flex items-center justify-center font-bold">
-                    {acc.label[0]}
-                  </span>
-                  {acc.label}
-                </button>
-              ))}
+          {/* Public demo: password-less access to read-only demonstration accounts */}
+          {config.demoMode && (
+            <div className={config.passwordLogin ? 'mt-6 pt-6 border-t border-gray-100' : ''}>
+              <p className="text-sm text-gray-600 mb-3">
+                This is a read-only public demonstration. All projects, people and documents are fictional.
+              </p>
+              <div className="grid gap-2">
+                {demoAccounts.map(acc => (
+                  <button key={acc.email} type="button" disabled={loading}
+                    onClick={() => enterDemo(acc.email)}
+                    className="btn-primary w-full justify-start gap-2">
+                    <PlayCircle size={16} />
+                    Explore as {roleLabel(acc.role)}
+                  </button>
+                ))}
+                {demoAccounts.length === 0 && (
+                  <p className="text-xs text-gray-500">Demo accounts are not available right now.</p>
+                )}
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Local development: seeded accounts (never included in production builds) */}
+          {config.passwordLogin && DEV_ACCOUNTS.length > 0 && (
+            <div className="mt-6 pt-6 border-t border-gray-100">
+              <p className="text-xs text-gray-500 text-center mb-3">Local development accounts</p>
+              <div className="grid grid-cols-2 gap-2">
+                {DEV_ACCOUNTS.map(acc => (
+                  <button key={acc.label} type="button"
+                    onClick={() => fillDemo(acc.email, acc.pw)}
+                    className="btn-secondary btn-sm text-xs justify-start gap-2">
+                    <span className="w-4 h-4 bg-primary-100 text-primary-700 rounded text-xs flex items-center justify-center font-bold">
+                      {acc.label[0]}
+                    </span>
+                    {acc.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <p className="text-center text-xs text-gray-500 mt-4">

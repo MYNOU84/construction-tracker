@@ -24,7 +24,7 @@ export const getDailyReports = async (req: AuthRequest, res: Response): Promise<
     });
     res.json(reports);
   } catch (err) {
-    res.status(500).json({ message: 'Failed to fetch reports', error: String(err) });
+    console.error('[api]', err); res.status(500).json({ message: 'Failed to fetch reports' });
   }
 };
 
@@ -90,7 +90,7 @@ export const createDailyReport = async (req: AuthRequest, res: Response): Promis
     });
     res.status(201).json(report);
   } catch (err) {
-    res.status(500).json({ message: 'Failed to create report', error: String(err) });
+    console.error('[api]', err); res.status(500).json({ message: 'Failed to create report' });
   }
 };
 
@@ -118,7 +118,7 @@ export const updateDailyReport = async (req: AuthRequest, res: Response): Promis
     const report = await prisma.dailyReport.update({ where: { id: req.params.reportId }, data: updateData });
     res.json(report);
   } catch (err) {
-    res.status(500).json({ message: 'Failed to update report', error: String(err) });
+    console.error('[api]', err); res.status(500).json({ message: 'Failed to update report' });
   }
 };
 
@@ -215,7 +215,7 @@ export const generateWeeklyReport = async (req: AuthRequest, res: Response): Pro
     });
     res.json(report);
   } catch (err) {
-    res.status(500).json({ message: 'Failed to generate weekly report', error: String(err) });
+    console.error('[api]', err); res.status(500).json({ message: 'Failed to generate weekly report' });
   }
 };
 
@@ -342,7 +342,7 @@ export const generateMonthlyReport = async (req: AuthRequest, res: Response): Pr
     });
     res.json(report);
   } catch (err) {
-    res.status(500).json({ message: 'Failed to generate monthly report', error: String(err) });
+    console.error('[api]', err); res.status(500).json({ message: 'Failed to generate monthly report' });
   }
 };
 
@@ -412,7 +412,7 @@ export const bulkImportActivities = async (req: AuthRequest, res: Response): Pro
     }
     res.json({ count });
   } catch (err) {
-    res.status(500).json({ message: 'Failed to import activities', error: String(err) });
+    console.error('[api]', err); res.status(500).json({ message: 'Failed to import activities' });
   }
 };
 
@@ -431,7 +431,7 @@ export const createActivity = async (req: AuthRequest, res: Response): Promise<v
     });
     res.status(201).json(activity);
   } catch (err) {
-    res.status(500).json({ message: 'Failed to create activity', error: String(err) });
+    console.error('[api]', err); res.status(500).json({ message: 'Failed to create activity' });
   }
 };
 
@@ -478,7 +478,7 @@ export const createMilestone = async (req: AuthRequest, res: Response): Promise<
     });
     res.status(201).json(milestone);
   } catch (err) {
-    res.status(500).json({ message: 'Failed to create milestone', error: String(err) });
+    console.error('[api]', err); res.status(500).json({ message: 'Failed to create milestone' });
   }
 };
 
@@ -526,7 +526,7 @@ export const createRisk = async (req: AuthRequest, res: Response): Promise<void>
     });
     res.status(201).json(risk);
   } catch (err) {
-    res.status(500).json({ message: 'Failed to create risk', error: String(err) });
+    console.error('[api]', err); res.status(500).json({ message: 'Failed to create risk' });
   }
 };
 
@@ -574,7 +574,7 @@ export const createNCR = async (req: AuthRequest, res: Response): Promise<void> 
     });
     res.status(201).json(ncr);
   } catch (err) {
-    res.status(500).json({ message: 'Failed to create NCR', error: String(err) });
+    console.error('[api]', err); res.status(500).json({ message: 'Failed to create NCR' });
   }
 };
 

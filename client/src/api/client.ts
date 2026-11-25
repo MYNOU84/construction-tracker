@@ -1,23 +1,31 @@
 import axios from 'axios';
 
+/**
+ * Sessions use an httpOnly cookie set by the server; the token is never
+ * readable from JavaScript. X-Requested-With is the CSRF header the API
+ * requires on every state-changing request.
+ */
 const api = axios.create({
   baseURL: '/api',
-  headers: { 'Content-Type': 'application/json' },
+  withCredentials: true,
+  headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
 });
 
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
+/** Shows a short message in the app-wide notice banner (see components/ui/Notice). */
+export const notify = (message: string) =>
+  window.dispatchEvent(new CustomEvent('bt:notice', { detail: message }));
 
 api.interceptors.response.use(
   (r) => r,
   (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
+    const status = error.response?.status;
+    const url: string = error.config?.url ?? '';
+    if (status === 401 && !url.startsWith('/auth/')) {
+      // Session expired or revoked: clear local state and go to sign-in once.
       localStorage.removeItem('user');
-      window.location.href = '/login';
+      if (window.location.pathname !== '/login') window.location.href = '/login';
+    } else if (status === 403 && error.response?.data?.demo) {
+      notify(error.response.data.message);
     }
     return Promise.reject(error);
   }

@@ -1,0 +1,86 @@
+/**
+ * Project-level access control.
+ *
+ * - ADMIN can access every project.
+ * - Every other role must be a ProjectMember of the project in the URL.
+ * - Child records (risks, activities, reports, ...) must belong to that same
+ *   project, so a member of project A cannot read or edit records of project B
+ *   by passing A's id in the URL and B's record id.
+ * - Client-supplied `id` / `projectId` / relation fields are stripped from
+ *   request bodies so records cannot be moved to another project.
+ */
+import { Response, NextFunction } from 'express';
+import prisma from '../lib/prisma';
+import { AuthRequest } from './auth';
+
+const projectIdFrom = (req: AuthRequest): string | undefined =>
+  req.params.projectId || req.params.id;
+
+export const isProjectMember = async (userId: string, projectId: string) =>
+  !!(await prisma.projectMember.findUnique({
+    where: { userId_projectId: { userId, projectId } },
+    select: { id: true },
+  }));
+
+export const requireProjectAccess = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const projectId = projectIdFrom(req);
+    if (!req.user || !projectId) { res.status(403).json({ message: 'Access denied' }); return; }
+    if (req.user.role === 'ADMIN') { next(); return; }
+    if (await isProjectMember(req.user.userId, projectId)) { next(); return; }
+    // 404 rather than 403 so project ids cannot be probed.
+    res.status(404).json({ message: 'Project not found' });
+  } catch {
+    res.status(500).json({ message: 'Access check failed' });
+  }
+};
+
+/** ADMIN, or a member whose project role is PROJECT_MANAGER. */
+export const requireProjectManager = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const projectId = projectIdFrom(req);
+    if (!req.user || !projectId) { res.status(403).json({ message: 'Access denied' }); return; }
+    if (req.user.role === 'ADMIN') { next(); return; }
+    const m = await prisma.projectMember.findUnique({
+      where: { userId_projectId: { userId: req.user.userId, projectId } },
+      select: { role: true },
+    });
+    if (m?.role === 'PROJECT_MANAGER') { next(); return; }
+    res.status(403).json({ message: 'Only the project manager or an administrator can do this' });
+  } catch {
+    res.status(500).json({ message: 'Access check failed' });
+  }
+};
+
+type ChildModel =
+  | 'dailyReport' | 'weeklyReport' | 'monthlyReport' | 'activity' | 'milestone'
+  | 'risk' | 'nCR' | 'plantEquipment' | 'siteResource' | 'document';
+
+/** Ensures the record named by `param` belongs to req.params.projectId. */
+export const requireChildOfProject = (model: ChildModel, param: string) =>
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const delegate = (prisma as any)[model];
+      const row = await delegate.findFirst({
+        where: { id: req.params[param], projectId: req.params.projectId },
+        select: { id: true },
+      });
+      if (!row) { res.status(404).json({ message: 'Not found' }); return; }
+      next();
+    } catch {
+      res.status(500).json({ message: 'Access check failed' });
+    }
+  };
+
+const PROTECTED_BODY_KEYS = [
+  'id', 'projectId', 'project', 'members', 'createdAt', 'updatedAt',
+  'submitter', 'uploader', 'comments', 'photos', 'user', 'userId',
+  'submittedBy', 'approvedBy', 'raisedBy', 'uploadedBy',
+];
+
+export const stripProtectedFields = (req: AuthRequest, _res: Response, next: NextFunction) => {
+  if (req.body && typeof req.body === 'object' && !Array.isArray(req.body)) {
+    for (const k of PROTECTED_BODY_KEYS) delete req.body[k];
+  }
+  next();
+};

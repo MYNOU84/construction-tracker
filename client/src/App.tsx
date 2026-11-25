@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 
@@ -63,8 +63,16 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
 }
 
+/** User administration is ADMIN-only on the server; mirror that in the UI. */
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const { user } = useAuthStore();
+  return user?.role === 'ADMIN' ? <>{children}</> : <Navigate to="/" replace />;
+}
+
 export default function App() {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, refresh } = useAuthStore();
+  // Re-validate the cookie session once on load (it may have expired or been revoked).
+  useEffect(() => { if (isAuthenticated) refresh(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <ErrorBoundary>
     <BrowserRouter>
@@ -90,7 +98,7 @@ export default function App() {
           <Route path="projects/:projectId/presentation" element={<ProjectPresentationPage />} />
           <Route path="projects/:projectId/map" element={<ProjectMapPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
-          <Route path="users" element={<UsersPage />} />
+          <Route path="users" element={<AdminRoute><UsersPage /></AdminRoute>} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

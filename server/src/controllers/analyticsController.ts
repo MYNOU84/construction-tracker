@@ -56,7 +56,7 @@ export const getDashboardStats = async (req: AuthRequest, res: Response): Promis
     };
     res.json(stats);
   } catch (err) {
-    res.status(500).json({ message: 'Failed to get dashboard stats', error: String(err) });
+    console.error('[api]', err); res.status(500).json({ message: 'Failed to get dashboard stats' });
   }
 };
 
@@ -157,7 +157,7 @@ export const getProjectAnalytics = async (req: AuthRequest, res: Response): Prom
         : 0,
     });
   } catch (err) {
-    res.status(500).json({ message: 'Failed to get analytics', error: String(err) });
+    console.error('[api]', err); res.status(500).json({ message: 'Failed to get analytics' });
   }
 };
 

@@ -1,6 +1,23 @@
 import { Response } from 'express';
 import prisma from '../lib/prisma';
 import { AuthRequest } from '../middleware/auth';
+import { ROLES } from '../config/security';
+
+// Fields a client may set on a project; everything else (id, members, ...) is ignored.
+const PROJECT_FIELDS = [
+  'name', 'code', 'description', 'client', 'consultant', 'contractor', 'location',
+  'startDate', 'endDate', 'status', 'progress', 'budget', 'actualCost', 'currency',
+  'imageUrl', 'presentationData',
+] as const;
+
+const pickProjectFields = (body: any) => {
+  const out: Record<string, any> = {};
+  if (!body || typeof body !== 'object') return out;
+  for (const k of PROJECT_FIELDS) if (body[k] !== undefined) out[k] = body[k];
+  if (out.startDate) out.startDate = new Date(out.startDate);
+  if (out.endDate) out.endDate = new Date(out.endDate);
+  return out;
+};
 
 export const getProjects = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -16,7 +33,7 @@ export const getProjects = async (req: AuthRequest, res: Response): Promise<void
     });
     res.json(projects);
   } catch (err) {
-    res.status(500).json({ message: 'Failed to fetch projects', error: String(err) });
+    res.status(500).json({ message: 'Failed to fetch projects' });
   }
 };
 
@@ -41,12 +58,10 @@ export const getProject = async (req: AuthRequest, res: Response): Promise<void>
 
 export const createProject = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const data = req.body;
+    const data = pickProjectFields(req.body);
     const project = await prisma.project.create({
       data: {
-        ...data,
-        startDate: new Date(data.startDate),
-        endDate: new Date(data.endDate),
+        ...(data as any),
         members: {
           create: { userId: req.user!.userId, role: 'PROJECT_MANAGER' },
         },
@@ -54,15 +69,14 @@ export const createProject = async (req: AuthRequest, res: Response): Promise<vo
     });
     res.status(201).json(project);
   } catch (err) {
-    res.status(500).json({ message: 'Failed to create project', error: String(err) });
+    console.error('[createProject]', err);
+    res.status(500).json({ message: 'Failed to create project' });
   }
 };
 
 export const updateProject = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const data = req.body;
-    if (data.startDate) data.startDate = new Date(data.startDate);
-    if (data.endDate) data.endDate = new Date(data.endDate);
+    const data = pickProjectFields(req.body);
     const project = await prisma.project.update({ where: { id: req.params.id }, data });
     res.json(project);
   } catch (err) {
@@ -123,7 +137,13 @@ export const getProjectStats = async (req: AuthRequest, res: Response): Promise<
 
 export const addMember = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { userId, role } = req.body;
+    const { userId, role } = req.body ?? {};
+    if (typeof userId !== 'string' || !(ROLES as readonly string[]).includes(role)) {
+      res.status(400).json({ message: 'A valid userId and role are required' });
+      return;
+    }
+    const exists = await prisma.user.findUnique({ where: { id: userId }, select: { isActive: true } });
+    if (!exists?.isActive) { res.status(404).json({ message: 'User not found' }); return; }
     const member = await prisma.projectMember.upsert({
       where: { userId_projectId: { userId, projectId: req.params.id } },
       create: { userId, projectId: req.params.id, role },

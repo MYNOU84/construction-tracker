@@ -1,6 +1,8 @@
 import { Router } from 'express';
-import { authenticate } from '../middleware/auth';
-import { login, register, getProfile, updateProfile } from '../controllers/authController';
+import { authenticate, authorize } from '../middleware/auth';
+import { requireProjectAccess, requireProjectManager, requireChildOfProject, stripProtectedFields } from '../middleware/access';
+import { requireCsrfHeader, demoReadOnly } from '../middleware/guards';
+import { login, register, getProfile, updateProfile, logout, demoLogin, demoAccounts, getAuthConfig } from '../controllers/authController';
 import {
   getProjects, getProject, createProject, updateProject, deleteProject,
   getProjectStats, addMember, removeMember
@@ -28,94 +30,108 @@ import { authLimiter, apiLimiter } from '../middleware/rateLimit';
 export const router = Router();
 
 router.use(apiLimiter);
+router.use(requireCsrfHeader);
+router.use(demoReadOnly);
+
+// Shorthands
+const auth = authenticate;
+const P = [authenticate, requireProjectAccess];            // member of :projectId / :id (or ADMIN)
+const PW = [...P, stripProtectedFields];                    // + body cannot re-target records
+const child = (model: Parameters<typeof requireChildOfProject>[0], param: string) =>
+  requireChildOfProject(model, param);
 
 // Auth
+router.get('/auth/config', getAuthConfig);
+router.get('/auth/demo-accounts', demoAccounts);
+router.post('/auth/demo', authLimiter, demoLogin);
 router.post('/auth/login', authLimiter, login);
 router.post('/auth/register', authLimiter, register);
+router.post('/auth/logout', logout);
 router.get('/auth/profile', authenticate, getProfile);
 router.put('/auth/profile', authenticate, updateProfile);
 
 // Dashboard / Analytics
 router.get('/analytics/dashboard', authenticate, getDashboardStats);
-router.get('/analytics/projects/:projectId', authenticate, getProjectAnalytics);
-router.get('/analytics/users', authenticate, getUserAnalytics);
+router.get('/analytics/projects/:projectId', ...P, getProjectAnalytics);
+router.get('/analytics/users', authenticate, authorize('ADMIN'), getUserAnalytics);
 
 // Projects
 router.get('/projects', authenticate, getProjects);
 router.post('/projects', authenticate, createProject);
-router.get('/projects/:id', authenticate, getProject);
-router.put('/projects/:id', authenticate, updateProject);
-router.delete('/projects/:id', authenticate, deleteProject);
-router.get('/projects/:id/stats', authenticate, getProjectStats);
-router.post('/projects/:id/members', authenticate, addMember);
-router.delete('/projects/:id/members/:userId', authenticate, removeMember);
+router.get('/projects/:id', ...P, getProject);
+router.put('/projects/:id', ...P, updateProject);
+router.delete('/projects/:id', auth, requireProjectManager, deleteProject);
+router.get('/projects/:id/stats', ...P, getProjectStats);
+router.post('/projects/:id/members', auth, requireProjectManager, addMember);
+router.delete('/projects/:id/members/:userId', auth, requireProjectManager, removeMember);
 
 // Daily Reports
-router.get('/projects/:projectId/reports/daily', authenticate, getDailyReports);
-router.post('/projects/:projectId/reports/daily', authenticate, createDailyReport);
-router.get('/projects/:projectId/reports/daily/:reportId', authenticate, getDailyReport);
-router.put('/projects/:projectId/reports/daily/:reportId', authenticate, updateDailyReport);
-router.delete('/projects/:projectId/reports/daily/:reportId', authenticate, deleteDailyReport);
-router.post('/projects/:projectId/reports/daily/:reportId/comments', authenticate, addComment);
+router.get('/projects/:projectId/reports/daily', ...P, getDailyReports);
+router.post('/projects/:projectId/reports/daily', ...PW, createDailyReport);
+router.get('/projects/:projectId/reports/daily/:reportId', ...P, child('dailyReport', 'reportId'), getDailyReport);
+router.put('/projects/:projectId/reports/daily/:reportId', ...PW, child('dailyReport', 'reportId'), updateDailyReport);
+router.delete('/projects/:projectId/reports/daily/:reportId', ...P, child('dailyReport', 'reportId'), deleteDailyReport);
+router.post('/projects/:projectId/reports/daily/:reportId/comments', ...PW, child('dailyReport', 'reportId'), addComment);
 
 // Weekly Reports
-router.get('/projects/:projectId/reports/weekly', authenticate, getWeeklyReports);
-router.post('/projects/:projectId/reports/weekly/generate', authenticate, generateWeeklyReport);
-router.put('/projects/:projectId/reports/weekly/:reportId', authenticate, updateWeeklyReport);
-router.delete('/projects/:projectId/reports/weekly/:reportId', authenticate, deleteWeeklyReport);
+router.get('/projects/:projectId/reports/weekly', ...P, getWeeklyReports);
+router.post('/projects/:projectId/reports/weekly/generate', ...PW, generateWeeklyReport);
+router.put('/projects/:projectId/reports/weekly/:reportId', ...PW, child('weeklyReport', 'reportId'), updateWeeklyReport);
+router.delete('/projects/:projectId/reports/weekly/:reportId', ...P, child('weeklyReport', 'reportId'), deleteWeeklyReport);
 
 // Monthly Reports
-router.get('/projects/:projectId/reports/monthly', authenticate, getMonthlyReports);
-router.post('/projects/:projectId/reports/monthly/generate', authenticate, generateMonthlyReport);
-router.put('/projects/:projectId/reports/monthly/:reportId', authenticate, updateMonthlyReport);
-router.delete('/projects/:projectId/reports/monthly/:reportId', authenticate, deleteMonthlyReport);
+router.get('/projects/:projectId/reports/monthly', ...P, getMonthlyReports);
+router.post('/projects/:projectId/reports/monthly/generate', ...PW, generateMonthlyReport);
+router.put('/projects/:projectId/reports/monthly/:reportId', ...PW, child('monthlyReport', 'reportId'), updateMonthlyReport);
+router.delete('/projects/:projectId/reports/monthly/:reportId', ...P, child('monthlyReport', 'reportId'), deleteMonthlyReport);
 
 // Activities
-router.get('/projects/:projectId/activities', authenticate, getActivities);
-router.post('/projects/:projectId/activities/bulk', authenticate, bulkImportActivities);
-router.post('/projects/:projectId/activities', authenticate, createActivity);
-router.put('/projects/:projectId/activities/:activityId', authenticate, updateActivity);
-router.delete('/projects/:projectId/activities/:activityId', authenticate, deleteActivity);
+router.get('/projects/:projectId/activities', ...P, getActivities);
+router.post('/projects/:projectId/activities/bulk', ...PW, bulkImportActivities);
+router.post('/projects/:projectId/activities', ...PW, createActivity);
+router.put('/projects/:projectId/activities/:activityId', ...PW, child('activity', 'activityId'), updateActivity);
+router.delete('/projects/:projectId/activities/:activityId', ...P, child('activity', 'activityId'), deleteActivity);
 
 // Milestones
-router.get('/projects/:projectId/milestones', authenticate, getMilestones);
-router.post('/projects/:projectId/milestones', authenticate, createMilestone);
-router.put('/projects/:projectId/milestones/:milestoneId', authenticate, updateMilestone);
-router.delete('/projects/:projectId/milestones/:milestoneId', authenticate, deleteMilestone);
+router.get('/projects/:projectId/milestones', ...P, getMilestones);
+router.post('/projects/:projectId/milestones', ...PW, createMilestone);
+router.put('/projects/:projectId/milestones/:milestoneId', ...PW, child('milestone', 'milestoneId'), updateMilestone);
+router.delete('/projects/:projectId/milestones/:milestoneId', ...P, child('milestone', 'milestoneId'), deleteMilestone);
 
 // Risks
-router.get('/projects/:projectId/risks', authenticate, getRisks);
-router.post('/projects/:projectId/risks', authenticate, createRisk);
-router.put('/projects/:projectId/risks/:riskId', authenticate, updateRisk);
-router.delete('/projects/:projectId/risks/:riskId', authenticate, deleteRisk);
+router.get('/projects/:projectId/risks', ...P, getRisks);
+router.post('/projects/:projectId/risks', ...PW, createRisk);
+router.put('/projects/:projectId/risks/:riskId', ...PW, child('risk', 'riskId'), updateRisk);
+router.delete('/projects/:projectId/risks/:riskId', ...P, child('risk', 'riskId'), deleteRisk);
 
 // NCRs
-router.get('/projects/:projectId/ncrs', authenticate, getNCRs);
-router.post('/projects/:projectId/ncrs', authenticate, createNCR);
-router.put('/projects/:projectId/ncrs/:ncrId', authenticate, updateNCR);
-router.delete('/projects/:projectId/ncrs/:ncrId', authenticate, deleteNCR);
+router.get('/projects/:projectId/ncrs', ...P, getNCRs);
+router.post('/projects/:projectId/ncrs', ...PW, createNCR);
+router.put('/projects/:projectId/ncrs/:ncrId', ...PW, child('nCR', 'ncrId'), updateNCR);
+router.delete('/projects/:projectId/ncrs/:ncrId', ...P, child('nCR', 'ncrId'), deleteNCR);
 
 // Plant & Equipment Register
-router.get('/projects/:projectId/plant', authenticate, getPlantEquipment);
-router.post('/projects/:projectId/plant', authenticate, createPlantEquipment);
-router.put('/projects/:projectId/plant/:itemId', authenticate, updatePlantEquipment);
-router.delete('/projects/:projectId/plant/:itemId', authenticate, deletePlantEquipment);
+router.get('/projects/:projectId/plant', ...P, getPlantEquipment);
+router.post('/projects/:projectId/plant', ...PW, createPlantEquipment);
+router.put('/projects/:projectId/plant/:itemId', ...PW, child('plantEquipment', 'itemId'), updatePlantEquipment);
+router.delete('/projects/:projectId/plant/:itemId', ...P, child('plantEquipment', 'itemId'), deletePlantEquipment);
 
 // Site Resources (Workforce Register)
-router.get('/projects/:projectId/resources', authenticate, getSiteResources);
-router.post('/projects/:projectId/resources', authenticate, createSiteResource);
-router.put('/projects/:projectId/resources/:itemId', authenticate, updateSiteResource);
-router.delete('/projects/:projectId/resources/:itemId', authenticate, deleteSiteResource);
+router.get('/projects/:projectId/resources', ...P, getSiteResources);
+router.post('/projects/:projectId/resources', ...PW, createSiteResource);
+router.put('/projects/:projectId/resources/:itemId', ...PW, child('siteResource', 'itemId'), updateSiteResource);
+router.delete('/projects/:projectId/resources/:itemId', ...P, child('siteResource', 'itemId'), deleteSiteResource);
 
 // Documents
-router.get('/projects/:projectId/documents', authenticate, getDocuments);
-router.post('/projects/:projectId/documents', authenticate, uploadDocMiddleware.single('file'), uploadDocument);
-router.delete('/projects/:projectId/documents/:docId', authenticate, deleteDocument);
+router.get('/projects/:projectId/documents', ...P, getDocuments);
+router.post('/projects/:projectId/documents', ...P, uploadDocMiddleware.single('file'), uploadDocument);
+router.delete('/projects/:projectId/documents/:docId', ...P, child('document', 'docId'), deleteDocument);
 router.post('/photos', authenticate, uploadPhotoMiddleware.single('file'), uploadPhoto);
 
 // Users
-router.get('/users', authenticate, getUsers);
-router.post('/users', authenticate, createUser);
-router.get('/users/:userId', authenticate, getUser);
-router.put('/users/:userId', authenticate, updateUser);
-router.delete('/users/:userId', authenticate, deleteUser);
+const admin = [authenticate, authorize('ADMIN')];
+router.get('/users', ...admin, getUsers);
+router.post('/users', ...admin, createUser);
+router.get('/users/:userId', ...admin, getUser);
+router.put('/users/:userId', ...admin, updateUser);
+router.delete('/users/:userId', ...admin, deleteUser);

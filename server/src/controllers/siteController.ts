@@ -16,7 +16,7 @@ export const getPlantEquipment = async (req: AuthRequest, res: Response): Promis
     });
     res.json(items);
   } catch (err) {
-    res.status(500).json({ message: 'Failed to fetch plant equipment', error: String(err) });
+    console.error('[api]', err); res.status(500).json({ message: 'Failed to fetch plant equipment' });
   }
 };
 
@@ -35,7 +35,7 @@ export const createPlantEquipment = async (req: AuthRequest, res: Response): Pro
     });
     res.status(201).json(item);
   } catch (err) {
-    res.status(500).json({ message: 'Failed to create equipment', error: String(err) });
+    console.error('[api]', err); res.status(500).json({ message: 'Failed to create equipment' });
   }
 };
 
@@ -49,7 +49,7 @@ export const updatePlantEquipment = async (req: AuthRequest, res: Response): Pro
     const item = await prisma.plantEquipment.update({ where: { id: req.params.itemId }, data });
     res.json(item);
   } catch (err) {
-    res.status(500).json({ message: 'Failed to update equipment', error: String(err) });
+    console.error('[api]', err); res.status(500).json({ message: 'Failed to update equipment' });
   }
 };
 
@@ -77,7 +77,7 @@ export const getSiteResources = async (req: AuthRequest, res: Response): Promise
     });
     res.json(items);
   } catch (err) {
-    res.status(500).json({ message: 'Failed to fetch site resources', error: String(err) });
+    console.error('[api]', err); res.status(500).json({ message: 'Failed to fetch site resources' });
   }
 };
 
@@ -93,7 +93,7 @@ export const createSiteResource = async (req: AuthRequest, res: Response): Promi
     });
     res.status(201).json(item);
   } catch (err) {
-    res.status(500).json({ message: 'Failed to create resource', error: String(err) });
+    console.error('[api]', err); res.status(500).json({ message: 'Failed to create resource' });
   }
 };
 
@@ -104,7 +104,7 @@ export const updateSiteResource = async (req: AuthRequest, res: Response): Promi
     const item = await prisma.siteResource.update({ where: { id: req.params.itemId }, data });
     res.json(item);
   } catch (err) {
-    res.status(500).json({ message: 'Failed to update resource', error: String(err) });
+    console.error('[api]', err); res.status(500).json({ message: 'Failed to update resource' });
   }
 };
 
