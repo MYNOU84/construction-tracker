@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800" role="img" aria-label="Dewatering wells and monitoring piezometers (fictional illustration)">
+<title>Dewatering wells and monitoring piezometers – fictional illustration</title>
+<defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9EC3DE"/><stop offset="1" stop-color="#E8EEF2"/></linearGradient></defs><rect width="1200" height="720" fill="url(#sky)"/>
+<polygon points="0,300 1200,300 1200,720 0,720" fill="#A88F6A"/><polygon points="120,330 1080,330 980,660 220,660" fill="#7E6648"/><polygon points="220,660 980,660 1080,330 1200,330 1200,720 0,720 0,330 120,330" fill="#9A8260"/>
+<rect x="130" y="300" width="60" height="40" fill="#9C9C98" stroke="#555" />
+<rect x="198" y="300" width="60" height="40" fill="#9C9C98" stroke="#555" />
+<rect x="266" y="300" width="60" height="40" fill="#9C9C98" stroke="#555" />
+<rect x="334" y="300" width="60" height="40" fill="#9C9C98" stroke="#555" />
+<rect x="402" y="300" width="60" height="40" fill="#9C9C98" stroke="#555" />
+<rect x="470" y="300" width="60" height="40" fill="#9C9C98" stroke="#555" />
+<rect x="538" y="300" width="60" height="40" fill="#9C9C98" stroke="#555" />
+<rect x="606" y="300" width="60" height="40" fill="#9C9C98" stroke="#555" />
+<rect x="674" y="300" width="60" height="40" fill="#9C9C98" stroke="#555" />
+<rect x="742" y="300" width="60" height="40" fill="#9C9C98" stroke="#555" />
+<rect x="810" y="300" width="60" height="40" fill="#9C9C98" stroke="#555" />
+<rect x="878" y="300" width="60" height="40" fill="#9C9C98" stroke="#555" />
+<rect x="946" y="300" width="60" height="40" fill="#9C9C98" stroke="#555" />
+<rect x="1014" y="300" width="60" height="40" fill="#9C9C98" stroke="#555" />
+<rect x="120" y="300" width="960" height="18" fill="#BDBDB8"/>
+<line x1="180" y1="420" x2="300" y2="420" stroke="#C9982C" stroke-width="10"/>
+<line x1="380" y1="420" x2="460" y2="420" stroke="#C9982C" stroke-width="10"/>
+<line x1="580" y1="420" x2="620" y2="420" stroke="#C9982C" stroke-width="10"/>
+<line x1="780" y1="420" x2="780" y2="420" stroke="#C9982C" stroke-width="10"/>
+<line x1="980" y1="420" x2="940" y2="420" stroke="#C9982C" stroke-width="10"/>
+<g fill="#E0B040" stroke="#333" stroke-width="2"><rect x="475.696001695469" y="560" width="130" height="50"/><rect x="525.696001695469" y="520" width="60" height="40"/></g><line x1="605.696001695469" y1="540" x2="695.696001695469" y2="480" stroke="#333" stroke-width="10"/>
+<circle cx="260" cy="640" r="10" fill="#3D6B8E"/>
+<circle cx="480" cy="640" r="10" fill="#3D6B8E"/>
+<circle cx="700" cy="640" r="10" fill="#3D6B8E"/>
+<circle cx="920" cy="640" r="10" fill="#3D6B8E"/>
+<rect x="0" y="720" width="1200" height="80" fill="#0A0A0B"/>
+<rect x="0" y="718" width="1200" height="3" fill="#C9982C"/>
+<text x="28" y="752" font-family="Inter,Arial,sans-serif" font-size="24" fill="#F5F1E8">Dewatering wells and monitoring piezometers</text>
+<text x="28" y="782" font-family="Inter,Arial,sans-serif" font-size="16" fill="#D4A53C">Centre Commercial Bab Ezzouar · FICTIONAL ILLUSTRATION – DEMO DATA</text>
+<text x="1172" y="782" text-anchor="end" font-family="Inter,Arial,sans-serif" font-size="16" fill="#8A8A8E">BuildTrack Pro</text>
+</svg>

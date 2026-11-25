@@ -6,13 +6,17 @@ import { projectsApi } from '../../api/endpoints';
 import { formatDate } from '../../utils/helpers';
 import { useUiStore } from '../../store/uiStore';
 
-const getBreadcrumbs = (pathname: string) => {
+// Record ids (cuid or seeded "demo-…" ids) are shown by name, never raw.
+const looksLikeId = (part: string) => /^c[a-z0-9]{20,}$/.test(part) || /^demo-[a-z0-9-]+$/.test(part);
+
+const getBreadcrumbs = (pathname: string, names: Map<string, string>) => {
   const parts = pathname.split('/').filter(Boolean);
   const crumbs: { label: string; to: string }[] = [{ label: 'Home', to: '/' }];
   let path = '';
   for (const part of parts) {
     path += `/${part}`;
-    const label = part.charAt(0).toUpperCase() + part.slice(1).replace(/-/g, ' ');
+    const label = names.get(part)
+      ?? (looksLikeId(part) ? 'Details' : part.charAt(0).toUpperCase() + part.slice(1).replace(/-/g, ' '));
     crumbs.push({ label, to: path });
   }
   return crumbs;
@@ -31,7 +35,6 @@ type Notif = {
 export default function Header() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const crumbs = getBreadcrumbs(pathname);
   const [showNotif, setShowNotif] = useState(false);
   const [read, setRead] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -52,6 +55,7 @@ export default function Header() {
     queryFn: () => projectsApi.list().then(r => r.data),
     staleTime: 60000,
   });
+  const crumbs = getBreadcrumbs(pathname, new Map((projects as { id: string; name: string }[]).map(p => [p.id, p.name])));
 
   const notifications: Notif[] = [];
   projects.forEach((p: any) => {

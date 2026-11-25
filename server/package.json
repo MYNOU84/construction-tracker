@@ -11,7 +11,10 @@
     "seed": "tsx src/seed.ts",
     "db:check": "node scripts/db-sync.js",
     "db:upgrade": "node scripts/db-sync.js --apply",
-    "test:security": "tsc && node tests/security/run.mjs"
+    "test:security": "tsc && node tests/security/run.mjs",
+    "db:demo": "node scripts/demo-db.js",
+    "seed:demo": "tsx src/seed-demo.ts",
+    "demo:docs": "tsx src/demo/generate-docs.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.14.0",

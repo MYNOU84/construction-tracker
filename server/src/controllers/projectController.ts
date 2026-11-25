@@ -46,7 +46,7 @@ export const getProject = async (req: AuthRequest, res: Response): Promise<void>
         milestones: { orderBy: { plannedDate: 'asc' } },
         activities: { orderBy: { plannedStart: 'asc' } },
         risks: { orderBy: { riskScore: 'desc' } },
-        _count: { select: { dailyReports: true, documents: true, ncrs: true } },
+        _count: { select: { dailyReports: true, activities: true, documents: true, ncrs: true } },
       },
     });
     if (!project) { res.status(404).json({ message: 'Project not found' }); return; }
