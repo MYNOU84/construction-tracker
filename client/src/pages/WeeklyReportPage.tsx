@@ -224,7 +224,7 @@ function WeeklyReportDetail({ report, project, onUpdate }: { report: WeeklyRepor
   return (
     <div className="space-y-4">
       {/* Header Card */}
-      <div className="card bg-gradient-to-r from-primary-700 to-primary-900 text-white">
+      <div className="card hero-card text-white">
         <div className="flex justify-between items-start mb-4">
           <div>
             <h2 className="text-xl font-bold">Weekly Report — Week {report.weekNumber}/{report.year}</h2>
@@ -235,7 +235,7 @@ function WeeklyReportDetail({ report, project, onUpdate }: { report: WeeklyRepor
             <StatusBadge status={report.status} />
           </div>
         </div>
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
             { label: 'Overall Progress', value: `${report.overallProgress}%` },
             { label: 'Planned Progress', value: `${report.plannedProgress}%` },
@@ -256,7 +256,7 @@ function WeeklyReportDetail({ report, project, onUpdate }: { report: WeeklyRepor
           <h3 className="font-semibold text-gray-900 mb-4">Daily Manpower</h3>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" />
               <XAxis dataKey="date" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 11 }} />
               <Tooltip />

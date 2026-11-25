@@ -68,18 +68,20 @@ export const getStatusLabel = (status: string): string => {
   return map[status] || status;
 };
 
+// Discipline colours: harmonised with the black/gold identity, still distinct per trade.
+// Hex values (not CSS vars) because callers append alpha suffixes, e.g. `${color}20`.
 export const getDisciplineColor = (discipline: string): string => {
   const map: Record<string, string> = {
-    STRUCTURE:     '#00d4ff',
-    ARCHITECTURE:  '#fb923c',
-    MECANIQUE:     '#8c3aff',
-    ELECTRICITE:   '#ffb800',
-    PLOMBERIE:     '#06b6d4',
-    CIVIL:         '#00d68f',
-    INFRASTRUCTURE:'#ff006e',
-    GENERAL:       '#4a5f85',
+    STRUCTURE:     '#C9982C',
+    ARCHITECTURE:  '#D07A45',
+    MECANIQUE:     '#8F7CC4',
+    ELECTRICITE:   '#5E8DB8',
+    PLOMBERIE:     '#3FA39A',
+    CIVIL:         '#4FA877',
+    INFRASTRUCTURE:'#C9566B',
+    GENERAL:       '#8C8578',
   };
-  return map[discipline] || '#4a5f85';
+  return map[discipline] || '#8C8578';
 };
 
 export const getRiskLevel = (score: number): string => {

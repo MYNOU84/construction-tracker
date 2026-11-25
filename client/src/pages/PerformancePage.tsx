@@ -190,9 +190,9 @@ export default function PerformancePage() {
   // Activity donut data
   const actPieData = [
     { name: 'Completed',   value: completedActs,  color: '#22c55e' },
-    { name: 'In Progress', value: inProgressActs, color: '#3b82f6' },
+    { name: 'In Progress', value: inProgressActs, color: 'var(--chart-3)' },
     { name: 'Delayed',     value: delayedActs,    color: '#ef4444' },
-    { name: 'Not Started', value: notStartedActs, color: '#cbd5e1' },
+    { name: 'Not Started', value: notStartedActs, color: 'var(--chart-7)' },
   ].filter(d => d.value > 0);
 
   // Risk matrix data
@@ -246,10 +246,10 @@ export default function PerformancePage() {
           <SectionTitle title="Score Global" subtitle="Vue d'ensemble des 6 dimensions" />
           <ResponsiveContainer width="100%" height={240}>
             <RadarChart data={radarData} margin={{ top: 10, right: 20, bottom: 10, left: 20 }}>
-              <PolarGrid stroke="#e2e8f0" />
-              <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11, fontWeight: 600, fill: '#475569' }} />
+              <PolarGrid stroke="var(--chart-grid)" />
+              <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11, fontWeight: 600, fill: 'var(--text-2)' }} />
               <PolarRadiusAxis domain={[0, 100]} tick={{ fontSize: 9 }} tickCount={4} />
-              <Radar dataKey="value" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.25} strokeWidth={2} />
+              <Radar dataKey="value" stroke="var(--chart-3)" fill="var(--chart-3)" fillOpacity={0.25} strokeWidth={2} />
               <Tooltip formatter={(v: any) => [`${v.toFixed(0)}%`]} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
             </RadarChart>
           </ResponsiveContainer>
@@ -406,11 +406,11 @@ export default function PerformancePage() {
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Manpower — last 14 reports</p>
             <ResponsiveContainer width="100%" height={160}>
               <AreaChart data={manpowerTrend} margin={{ left: 0, right: 10 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" />
                 <XAxis dataKey="date" tick={{ fontSize: 10 }} />
                 <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
                 <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
-                <Area type="monotone" dataKey="manpower" stroke="#3b82f6" fill="#bfdbfe" strokeWidth={2} name="Manpower" />
+                <Area type="monotone" dataKey="manpower" stroke="var(--chart-3)" fill="var(--info-soft)" strokeWidth={2} name="Manpower" />
               </AreaChart>
             </ResponsiveContainer>
           </>
@@ -422,7 +422,7 @@ export default function PerformancePage() {
         {/* NCRs */}
         <div className="card">
           <SectionTitle title="Qualité — NCRs" subtitle="Non-Conformity Reports" />
-          <div className="grid grid-cols-3 gap-3 mb-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
             {[
               { label: 'Total', value: totalNCRs, color: 'text-gray-900 bg-gray-50' },
               { label: 'Open', value: openNCRs, color: openNCRs > 0 ? 'text-red-700 bg-red-50' : 'text-gray-400 bg-gray-50' },
@@ -454,7 +454,7 @@ export default function PerformancePage() {
         {/* Risks */}
         <div className="card">
           <SectionTitle title="Risk Management" subtitle="Risk Register Summary" />
-          <div className="grid grid-cols-3 gap-3 mb-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
             {[
               { label: 'Open', value: openRisks, color: openRisks > 0 ? 'text-orange-700 bg-orange-50' : 'text-gray-400 bg-gray-50' },
               { label: 'Critical', value: highRisks, color: highRisks > 0 ? 'text-red-700 bg-red-50' : 'text-gray-400 bg-gray-50' },

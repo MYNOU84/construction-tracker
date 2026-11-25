@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
-import { Bell, ChevronRight, CheckCheck, Clock, AlertTriangle, FileText, ArrowLeft, TrendingUp, ClipboardList, PauseCircle, CalendarClock } from 'lucide-react';
+import { Bell, ChevronRight, CheckCheck, AlertTriangle, ArrowLeft, TrendingUp, ClipboardList, CalendarClock, Menu, Sun, Moon } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { projectsApi } from '../../api/endpoints';
 import { formatDate } from '../../utils/helpers';
+import { useUiStore } from '../../store/uiStore';
 
 const getBreadcrumbs = (pathname: string) => {
   const parts = pathname.split('/').filter(Boolean);
@@ -36,6 +37,7 @@ export default function Header() {
   const ref = useRef<HTMLDivElement>(null);
 
   const canGoBack = pathname !== '/';
+  const { theme, toggleTheme, setSidebarOpen } = useUiStore();
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -122,9 +124,9 @@ export default function Header() {
 
   const icons: Record<string, JSX.Element> = {
     warning:  <AlertTriangle size={14} style={{ color: 'var(--orange)', flexShrink: 0, marginTop: 1 }} />,
-    info:     <CalendarClock size={14} style={{ color: 'var(--cyan)',   flexShrink: 0, marginTop: 1 }} />,
+    info:     <CalendarClock size={14} style={{ color: 'var(--info)',   flexShrink: 0, marginTop: 1 }} />,
     success:  <ClipboardList size={14} style={{ color: 'var(--green)',  flexShrink: 0, marginTop: 1 }} />,
-    progress: <TrendingUp    size={14} style={{ color: '#a78bfa',       flexShrink: 0, marginTop: 1 }} />,
+    progress: <TrendingUp    size={14} style={{ color: 'var(--accent)',  flexShrink: 0, marginTop: 1 }} />,
   };
 
   const typeOrder = ['warning', 'info', 'progress', 'success'];
@@ -138,70 +140,66 @@ export default function Header() {
   };
 
   return (
-    <header className="h-16 flex items-center px-6 gap-3 sticky top-0 z-20"
-      style={{ background: 'var(--bg-card)', borderBottom: '1px solid var(--border)' }}>
+    <header className="h-16 flex items-center px-3 sm:px-6 gap-2 sm:gap-3 sticky top-0 z-20"
+      style={{
+        background: 'color-mix(in srgb, var(--bg-card) 88%, transparent)',
+        backdropFilter: 'saturate(140%) blur(10px)',
+        WebkitBackdropFilter: 'saturate(140%) blur(10px)',
+        borderBottom: '1px solid var(--border)',
+      }}>
+
+      {/* Mobile / tablet: open navigation drawer */}
+      <button
+        onClick={() => setSidebarOpen(true)}
+        className="icon-btn lg:hidden flex-shrink-0"
+        aria-label="Open navigation">
+        <Menu size={18} />
+      </button>
 
       {/* Back button */}
       {canGoBack && (
         <button
           onClick={() => navigate(-1)}
-          className="p-2 rounded-lg transition-all duration-150 flex-shrink-0"
-          style={{ color: 'var(--text-3)', border: '1px solid var(--border)' }}
-          onMouseEnter={e => {
-            const el = e.currentTarget;
-            el.style.color = 'var(--cyan)';
-            el.style.borderColor = 'var(--border-neon)';
-            el.style.background = 'rgba(0,212,255,0.08)';
-          }}
-          onMouseLeave={e => {
-            const el = e.currentTarget;
-            el.style.color = 'var(--text-3)';
-            el.style.borderColor = 'var(--border)';
-            el.style.background = 'transparent';
-          }}
-          title="Go back">
+          className="icon-btn flex-shrink-0 hidden sm:inline-flex"
+          title="Go back"
+          aria-label="Go back">
           <ArrowLeft size={16} />
         </button>
       )}
 
       {/* Breadcrumb */}
-      <nav className="flex items-center gap-1 text-sm flex-1 min-w-0">
+      <nav className="flex items-center gap-1 text-sm flex-1 min-w-0" aria-label="Breadcrumb">
         {crumbs.slice(-3).map((crumb, i, arr) => (
-          <span key={crumb.to} className="flex items-center gap-1 min-w-0">
-            {i > 0 && <ChevronRight size={13} style={{ color: 'var(--text-3)', flexShrink: 0 }} />}
+          <span key={crumb.to} className={`items-center gap-1 min-w-0 ${i === arr.length - 1 ? 'flex' : 'hidden md:flex'}`}>
+            {i > 0 && <ChevronRight size={13} className="hidden md:block" style={{ color: 'var(--text-3)', flexShrink: 0 }} />}
             {i === arr.length - 1
               ? <span className="font-semibold truncate" style={{ color: 'var(--text-1)' }}>{crumb.label}</span>
-              : <Link to={crumb.to} className="truncate transition-colors"
-                  style={{ color: 'var(--text-3)' }}
-                  onMouseEnter={e => (e.currentTarget.style.color = 'var(--cyan)')}
-                  onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-3)')}>{crumb.label}</Link>
+              : <Link to={crumb.to} className="crumb-link truncate">{crumb.label}</Link>
             }
           </span>
         ))}
       </nav>
 
+      {/* Theme toggle */}
+      <button
+        onClick={toggleTheme}
+        className="icon-btn flex-shrink-0"
+        title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+        aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}>
+        {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
+      </button>
+
       {/* Notification Bell */}
       <div className="relative flex-shrink-0" ref={ref}>
         <button
           onClick={() => { setShowNotif(v => !v); setRead(true); }}
-          className="p-2 rounded-lg transition-all duration-150 relative"
-          style={{ color: showNotif ? 'var(--cyan)' : 'var(--text-3)', border: '1px solid var(--border)' }}
-          onMouseEnter={e => {
-            const el = e.currentTarget;
-            el.style.color = 'var(--cyan)';
-            el.style.borderColor = 'var(--border-neon)';
-            el.style.background = 'rgba(0,212,255,0.08)';
-          }}
-          onMouseLeave={e => {
-            if (showNotif) return;
-            const el = e.currentTarget;
-            el.style.color = 'var(--text-3)';
-            el.style.borderColor = 'var(--border)';
-            el.style.background = 'transparent';
-          }}>
+          className="icon-btn relative"
+          style={showNotif ? { color: 'var(--accent)', borderColor: 'var(--border-accent)', background: 'var(--accent-faint)' } : undefined}
+          aria-label="Notifications"
+          aria-expanded={showNotif}>
           <Bell size={17} />
           {unread && (
-            <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center text-[9px] font-bold animate-pulse"
+            <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center text-[9px] font-bold"
               style={{ background: 'var(--red)', color: '#fff' }}>
               {sortedNotifications.length}
             </span>
@@ -209,22 +207,22 @@ export default function Header() {
         </button>
 
         {showNotif && (
-          <div className="absolute right-0 top-full mt-2 w-[320px] rounded-xl z-50 overflow-hidden fade-in"
-            style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-neon)', boxShadow: '0 16px 48px rgba(0,0,0,0.65)' }}>
+          <div className="absolute right-0 top-full mt-2 w-[min(340px,calc(100vw-24px))] rounded-xl z-50 overflow-hidden fade-in"
+            style={{ background: 'var(--bg-card)', border: '1px solid var(--border-accent)', boxShadow: 'var(--shadow-lg)' }}>
 
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3"
-              style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-elevated)' }}>
-              <span className="font-semibold text-sm" style={{ color: 'var(--text-1)' }}>Notifications</span>
+              style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)' }}>
+              <span className="font-display font-semibold text-[15px]" style={{ color: 'var(--text-1)' }}>Notifications</span>
               {sortedNotifications.length > 0 && (
                 <div className="flex items-center gap-1.5">
                   {sortedNotifications.filter(n => n.type === 'warning').length > 0 && (
-                    <span className="text-xs font-bold px-1.5 py-0.5 rounded" style={{ background: 'rgba(255,107,53,0.18)', color: 'var(--orange)' }}>
+                    <span className="badge badge-orange">
                       {sortedNotifications.filter(n => n.type === 'warning').length} warning{sortedNotifications.filter(n => n.type === 'warning').length > 1 ? 's' : ''}
                     </span>
                   )}
                   {sortedNotifications.filter(n => n.type !== 'warning').length > 0 && (
-                    <span className="text-xs font-bold px-1.5 py-0.5 rounded" style={{ background: 'rgba(0,212,255,0.12)', color: 'var(--cyan)' }}>
+                    <span className="badge badge-gold">
                       {sortedNotifications.filter(n => n.type !== 'warning').length} info
                     </span>
                   )}
@@ -245,10 +243,8 @@ export default function Header() {
                   <button
                     key={n.id}
                     onClick={() => handleNotifClick(n)}
-                    className="w-full flex gap-3 px-4 py-3 text-left transition-all duration-150"
-                    style={{ borderBottom: '1px solid var(--border)' }}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,212,255,0.06)')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                    className="menu-row w-full flex gap-3 px-4 py-3 text-left"
+                    style={{ borderBottom: '1px solid var(--border)' }}>
                     <div className="mt-0.5">{icons[n.type]}</div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold" style={{ color: 'var(--text-1)' }}>{n.title}</p>
@@ -263,10 +259,10 @@ export default function Header() {
 
             {/* Footer */}
             <div className="px-4 py-2.5"
-              style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-elevated)' }}>
+              style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-surface)' }}>
               <Link to="/projects" onClick={() => setShowNotif(false)}
                 className="text-xs font-semibold transition-colors"
-                style={{ color: 'var(--cyan)' }}>
+                style={{ color: 'var(--accent)' }}>
                 View all projects →
               </Link>
             </div>

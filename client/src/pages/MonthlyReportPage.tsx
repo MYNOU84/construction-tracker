@@ -22,14 +22,14 @@ import type { MonthlyReport, StudyItem, MaterialItem, Project } from '../types';
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
 const DISC_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  STRUCTURE:      { label: 'Structure',      color: '#00d4ff', bg: 'bg-cyan-500' },
-  ARCHITECTURE:   { label: 'Architecture',   color: '#fb923c', bg: 'bg-orange-400' },
-  MECANIQUE:      { label: 'Mechanical',     color: '#8c3aff', bg: 'bg-violet-500' },
-  ELECTRICITE:    { label: 'Electrical',     color: '#ffb800', bg: 'bg-yellow-400' },
-  PLOMBERIE:      { label: 'Plumbing',       color: '#06b6d4', bg: 'bg-sky-400' },
-  CIVIL:          { label: 'Civil',          color: '#64748b', bg: 'bg-slate-500' },
-  INFRASTRUCTURE: { label: 'Infrastructure', color: '#00d68f', bg: 'bg-emerald-500' },
-  GENERAL:        { label: 'General',        color: '#94a3b8', bg: 'bg-slate-300' },
+  STRUCTURE:      { label: 'Structure',      color: '#C9982C', bg: 'bg-cyan-500' },
+  ARCHITECTURE:   { label: 'Architecture',   color: '#D07A45', bg: 'bg-orange-400' },
+  MECANIQUE:      { label: 'Mechanical',     color: '#8F7CC4', bg: 'bg-violet-500' },
+  ELECTRICITE:    { label: 'Electrical',     color: '#5E8DB8', bg: 'bg-yellow-400' },
+  PLOMBERIE:      { label: 'Plumbing',       color: '#3FA39A', bg: 'bg-sky-400' },
+  CIVIL:          { label: 'Civil',          color: '#4FA877', bg: 'bg-slate-500' },
+  INFRASTRUCTURE: { label: 'Infrastructure', color: '#C9566B', bg: 'bg-emerald-500' },
+  GENERAL:        { label: 'General',        color: '#8C8578', bg: 'bg-slate-300' },
 };
 
 function DisciplineDashboard({ report }: { report: MonthlyReport }) {
@@ -55,7 +55,7 @@ function DisciplineDashboard({ report }: { report: MonthlyReport }) {
     .filter(([, s]: any) => s.total > 0)
     .map(([code, s]: any) => ({
       name: DISC_CONFIG[code]?.label ?? code,
-      color: DISC_CONFIG[code]?.color ?? '#94a3b8',
+      color: DISC_CONFIG[code]?.color ?? '#8C8578',
       Completed: s.completed,
       'In Progress': s.inProgress,
       Delayed: s.delayed,
@@ -78,9 +78,9 @@ function DisciplineDashboard({ report }: { report: MonthlyReport }) {
           <div className="flex items-center gap-3 text-xs">
             {[
               { label: 'Completed', color: '#22c55e' },
-              { label: 'In Progress', color: '#3b82f6' },
+              { label: 'In Progress', color: 'var(--chart-3)' },
               { label: 'Delayed', color: '#ef4444' },
-              { label: 'Not Started', color: '#cbd5e1' },
+              { label: 'Not Started', color: 'var(--chart-7)' },
             ].map(l => (
               <span key={l.label} className="flex items-center gap-1 text-gray-500">
                 <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ backgroundColor: l.color }} />
@@ -141,18 +141,18 @@ function DisciplineDashboard({ report }: { report: MonthlyReport }) {
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Activities by discipline</p>
             <ResponsiveContainer width="100%" height={Math.max(180, barData.length * 44)}>
               <BarChart data={barData} layout="vertical" barSize={14} margin={{ left: 0, right: 40 }}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--chart-grid)" />
                 <XAxis type="number" tick={{ fontSize: 10 }} allowDecimals={false} />
                 <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fontWeight: 600 }} width={90} />
                 <Tooltip
                   formatter={(v, name) => [v, name]}
-                  contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e2e8f0' }}
+                  contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid var(--chart-grid)' }}
                 />
                 <Bar dataKey="Completed" stackId="a" fill="#22c55e" radius={[0,0,0,0]} />
-                <Bar dataKey="In Progress" stackId="a" fill="#3b82f6" />
+                <Bar dataKey="In Progress" stackId="a" fill="var(--chart-3)" />
                 <Bar dataKey="Delayed" stackId="a" fill="#ef4444" />
-                <Bar dataKey="Not Started" stackId="a" fill="#cbd5e1" radius={[0,4,4,0]}>
-                  <LabelList dataKey="total" position="right" style={{ fontSize: 10, fill: '#64748b', fontWeight: 600 }} formatter={(v: any) => `${v} act.`} />
+                <Bar dataKey="Not Started" stackId="a" fill="var(--chart-7)" radius={[0,4,4,0]}>
+                  <LabelList dataKey="total" position="right" style={{ fontSize: 10, fill: 'var(--text-3)', fontWeight: 600 }} formatter={(v: any) => `${v} act.`} />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -164,10 +164,10 @@ function DisciplineDashboard({ report }: { report: MonthlyReport }) {
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Overview</p>
           <ResponsiveContainer width="100%" height={220}>
             <RadarChart data={radarData} margin={{ top: 10, right: 20, bottom: 10, left: 20 }}>
-              <PolarGrid stroke="#e2e8f0" />
-              <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10, fontWeight: 600, fill: '#475569' }} />
-              <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 9, fill: '#94a3b8' }} tickCount={4} />
-              <Radar name="Progress" dataKey="progress" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.25} strokeWidth={2} />
+              <PolarGrid stroke="var(--chart-grid)" />
+              <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10, fontWeight: 600, fill: 'var(--text-2)' }} />
+              <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 9, fill: 'var(--text-3)' }} tickCount={4} />
+              <Radar name="Progress" dataKey="progress" stroke="var(--chart-3)" fill="var(--chart-3)" fillOpacity={0.25} strokeWidth={2} />
               <Tooltip formatter={(v: any) => [`${v}%`, 'Progress']} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
             </RadarChart>
           </ResponsiveContainer>
@@ -363,12 +363,12 @@ function MonthlyReportDetail({ report, project, onUpdate }: { report: MonthlyRep
   });
 
   const disciplines = [
-    { name: 'Structure',      value: report.structureProgress,      color: '#00d4ff' },
-    { name: 'Architecture',   value: report.architectureProgress,   color: '#fb923c' },
-    { name: 'Mechanical',     value: report.mecaniqueProgress ?? 0,  color: '#8c3aff' },
-    { name: 'Electrical',     value: report.electriciteProgress ?? 0, color: '#ffb800' },
-    { name: 'Plomberie',      value: report.plomberieProgress ?? 0,  color: '#06b6d4' },
-    { name: 'Infrastructure', value: report.infrastructureProgress, color: '#00d68f' },
+    { name: 'Structure',      value: report.structureProgress,      color: '#C9982C' },
+    { name: 'Architecture',   value: report.architectureProgress,   color: '#D07A45' },
+    { name: 'Mechanical',     value: report.mecaniqueProgress ?? 0,  color: '#8F7CC4' },
+    { name: 'Electrical',     value: report.electriciteProgress ?? 0, color: '#5E8DB8' },
+    { name: 'Plomberie',      value: report.plomberieProgress ?? 0,  color: '#3FA39A' },
+    { name: 'Infrastructure', value: report.infrastructureProgress, color: '#C9566B' },
   ];
 
   const radarData = disciplines.map(d => ({ subject: d.name, progress: d.value }));
@@ -385,7 +385,7 @@ function MonthlyReportDetail({ report, project, onUpdate }: { report: MonthlyRep
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="card bg-gradient-to-r from-navy-900 to-primary-800 text-white">
+      <div className="card hero-card text-white">
         <div className="flex items-start justify-between mb-4">
           <div>
             <h2 className="text-xl font-bold">{MONTHS[report.month - 1]} {report.year} — Monthly Report</h2>
@@ -404,7 +404,7 @@ function MonthlyReportDetail({ report, project, onUpdate }: { report: MonthlyRep
       </div>
 
       {/* KPI Grid */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {kpiCards.map(k => (
           <div key={k.label} className="card-sm text-center">
             <div className={`w-8 h-8 ${k.color} rounded-lg flex items-center justify-center mx-auto mb-2`}>
@@ -422,7 +422,7 @@ function MonthlyReportDetail({ report, project, onUpdate }: { report: MonthlyRep
       {/* Milestone Status */}
       <div className="card">
         <h3 className="font-semibold text-gray-900 mb-4">Milestone Status</h3>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="text-center p-3 bg-green-50 rounded-lg">
             <div className="text-2xl font-bold text-green-600">{report.completedMilestones}</div>
             <div className="text-xs text-green-700">Achieved</div>

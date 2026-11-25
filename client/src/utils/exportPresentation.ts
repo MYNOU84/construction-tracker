@@ -4,17 +4,18 @@ import { formatDate, formatCurrency } from './helpers';
 import type { Project, ProjectPresentationData } from '../types';
 
 type RGB = [number, number, number];
-const NAVY:  RGB = [10, 14, 31];
-const CARD:  RGB = [13, 20, 40];
-const CYAN:  RGB = [0, 212, 255];
-const VIO:   RGB = [140, 58, 255];
-const GREEN: RGB = [0, 214, 143];
-const AMBER: RGB = [255, 184, 0];
-const RED:   RGB = [255, 77, 109];
-const TEXT1: RGB = [232, 238, 248];
-const TEXT2: RGB = [136, 153, 187];
-const TEXT3: RGB = [74, 95, 133];
-const BORDER:RGB = [30, 45, 80];
+// BuildTrack Pro identity: architectural black, gold and warm white.
+const NAVY:  RGB = [10, 10, 11];
+const CARD:  RGB = [23, 23, 26];
+const CYAN:  RGB = [201, 152, 44];   // gold accent
+const VIO:   RGB = [224, 188, 99];   // light gold (gradient end)
+const GREEN: RGB = [91, 191, 138];
+const AMBER: RGB = [230, 176, 74];
+const RED:   RGB = [229, 99, 106];
+const TEXT1: RGB = [245, 241, 232];
+const TEXT2: RGB = [184, 174, 152];
+const TEXT3: RGB = [140, 133, 120];
+const BORDER:RGB = [46, 44, 40];
 
 const W = 210, MARGIN = 14;
 const CONTENT = W - MARGIN * 2;
@@ -23,7 +24,7 @@ function addHeader(doc: jsPDF, project: Project, pageNum: number, total: number)
   // Top bar
   doc.setFillColor(...NAVY);
   doc.rect(0, 0, W, 12, 'F');
-  // Cyan accent line
+  // Gold accent line
   for (let x = 0; x <= W; x++) {
     const t = x / W;
     const r = Math.round(CYAN[0] + (VIO[0] - CYAN[0]) * t);
@@ -49,7 +50,7 @@ function addFooter(doc: jsPDF) {
 function sectionTitle(doc: jsPDF, text: string, y: number, color = CYAN): number {
   doc.setFillColor(...color);
   doc.rect(MARGIN, y, CONTENT, 7, 'F');
-  doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(10, 14, 31);
+  doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(10, 10, 11);
   doc.text(text.toUpperCase(), MARGIN + 3, y + 5);
   doc.setFont('helvetica', 'normal');
   return y + 10;
@@ -81,16 +82,16 @@ export async function exportPresentationPDF(project: Project, data: ProjectPrese
   // Gradient diagonal accent
   for (let i = 0; i < 60; i++) {
     const alpha = (i / 60) * 0.12;
-    doc.setFillColor(0, 212, 255);
+    doc.setFillColor(201, 152, 44);
     doc.setGState(doc.GState({ opacity: alpha }));
     doc.rect(W - 80 + i, 0, 1, 120, 'F');
   }
   doc.setGState(doc.GState({ opacity: 1 }));
 
   // Logo box
-  doc.setFillColor(0, 212, 255);
+  doc.setFillColor(201, 152, 44);
   doc.roundedRect(MARGIN, 35, 22, 22, 3, 3, 'F');
-  doc.setFontSize(14); doc.setFont('helvetica', 'bold'); doc.setTextColor(10, 14, 31);
+  doc.setFontSize(14); doc.setFont('helvetica', 'bold'); doc.setTextColor(10, 10, 11);
   doc.text('BT', MARGIN + 11, 49, { align: 'center' });
 
   // Title block
@@ -157,8 +158,8 @@ export async function exportPresentationPDF(project: Project, data: ProjectPrese
   }
 
   // Footer bottom branding
-  doc.setFillColor(0, 212, 255); doc.roundedRect(MARGIN, 268, CONTENT, 12, 3, 3, 'F');
-  doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(10, 14, 31);
+  doc.setFillColor(201, 152, 44); doc.roundedRect(MARGIN, 268, CONTENT, 12, 3, 3, 'F');
+  doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(10, 10, 11);
   doc.text('BUILDTRACK PRO  —  Construction Management Platform', W / 2, 275.5, { align: 'center' });
 
   addFooter(doc);
@@ -179,7 +180,7 @@ export async function exportPresentationPDF(project: Project, data: ProjectPrese
       theme: 'plain',
       styles: { fontSize: 8, textColor: [...TEXT1] as any, fillColor: [...CARD] as any, lineColor: [...BORDER] as any, lineWidth: 0.3 },
       headStyles: { fillColor: [...NAVY] as any, textColor: [...TEXT3] as any, fontStyle: 'bold', fontSize: 7.5 },
-      alternateRowStyles: { fillColor: [16, 24, 48] as any },
+      alternateRowStyles: { fillColor: [17, 17, 19] as any },
       margin: { left: MARGIN, right: MARGIN },
     });
     addFooter(doc);
@@ -201,7 +202,7 @@ export async function exportPresentationPDF(project: Project, data: ProjectPrese
       theme: 'plain',
       styles: { fontSize: 8, textColor: [...TEXT1] as any, fillColor: [...CARD] as any, lineColor: [...BORDER] as any, lineWidth: 0.3 },
       headStyles: { fillColor: [...NAVY] as any, textColor: [...TEXT3] as any, fontStyle: 'bold', fontSize: 7.5 },
-      alternateRowStyles: { fillColor: [16, 24, 48] as any },
+      alternateRowStyles: { fillColor: [17, 17, 19] as any },
       columnStyles: { 4: { textColor: [...CYAN] as any, fontStyle: 'bold' } },
       margin: { left: MARGIN, right: MARGIN },
     });
@@ -251,7 +252,7 @@ export async function exportPresentationPDF(project: Project, data: ProjectPrese
       theme: 'plain',
       styles: { fontSize: 7.5, textColor: [...TEXT1] as any, fillColor: [...CARD] as any, lineColor: [...BORDER] as any, lineWidth: 0.3 },
       headStyles: { fillColor: [...NAVY] as any, textColor: [...TEXT3] as any, fontStyle: 'bold', fontSize: 7 },
-      alternateRowStyles: { fillColor: [16, 24, 48] as any },
+      alternateRowStyles: { fillColor: [17, 17, 19] as any },
       margin: { left: MARGIN, right: MARGIN },
     });
     addFooter(doc);
@@ -284,7 +285,7 @@ export async function exportPresentationPDF(project: Project, data: ProjectPrese
       theme: 'plain',
       styles: { fontSize: 7, textColor: [...TEXT1] as any, fillColor: [...CARD] as any, lineColor: [...BORDER] as any, lineWidth: 0.3 },
       headStyles: { fillColor: [...NAVY] as any, textColor: [...TEXT3] as any, fontStyle: 'bold', fontSize: 6.5 },
-      alternateRowStyles: { fillColor: [16, 24, 48] as any },
+      alternateRowStyles: { fillColor: [17, 17, 19] as any },
       columnStyles: { 4: { textColor: [...CYAN] as any, fontStyle: 'bold' } },
       margin: { left: MARGIN, right: MARGIN },
     });
@@ -309,7 +310,7 @@ export async function exportPresentationPDF(project: Project, data: ProjectPrese
       theme: 'plain',
       styles: { fontSize: 7.5, textColor: [...TEXT1] as any, fillColor: [...CARD] as any, lineColor: [...BORDER] as any, lineWidth: 0.3 },
       headStyles: { fillColor: [...NAVY] as any, textColor: [...TEXT3] as any, fontStyle: 'bold', fontSize: 7 },
-      alternateRowStyles: { fillColor: [16, 24, 48] as any },
+      alternateRowStyles: { fillColor: [17, 17, 19] as any },
       margin: { left: MARGIN, right: MARGIN },
     });
     addFooter(doc);

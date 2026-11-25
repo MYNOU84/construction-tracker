@@ -4,23 +4,26 @@ import type { DailyReport, MonthlyReport, Project } from '../types';
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
-// ─── Color palette (ARGB) ────────────────────────────────────────────────────
+// ─── Color palette (ARGB): BuildTrack Pro black / gold / warm white ─────────
+// Key names are kept from the original palette; CYAN is now the gold accent.
 const C = {
-  NAVY_DARK : 'FF0D1428',
-  NAVY_MID  : 'FF1A2744',
-  NAVY_HEAD : 'FF1E3A5F',
-  CYAN      : 'FF00D4FF',
-  GREEN     : 'FF00D68F',
-  AMBER     : 'FFFFB800',
-  RED       : 'FFFF4D6D',
-  VIOLET    : 'FF8C3AFF',
+  NAVY_DARK : 'FF0A0A0B',   // ink
+  NAVY_MID  : 'FF17171A',   // charcoal
+  NAVY_HEAD : 'FF1F1F23',   // table head
+  CYAN      : 'FFC9982C',   // gold accent
+  GOLD_TEXT : 'FF7A5A12',   // dark gold, readable on white
+  GREEN     : 'FF4FA877',
+  GREEN_TEXT: 'FF2E7D55',
+  AMBER     : 'FFE6B04A',
+  RED       : 'FFC9474F',
+  VIOLET    : 'FF8F7CC4',
   WHITE     : 'FFFFFFFF',
-  ROW_ALT   : 'FFF0F5FA',
-  BORDER    : 'FFCBD5E1',
-  TEXT_DARK : 'FF1E293B',
-  TEXT_MID  : 'FF64748B',
-  TOTAL_BG  : 'FFE2EFF8',
-  COVER_ACC : 'FF00D4FF',
+  ROW_ALT   : 'FFF8F4EA',
+  BORDER    : 'FFE2DACA',
+  TEXT_DARK : 'FF17171A',
+  TEXT_MID  : 'FF6B6559',
+  TOTAL_BG  : 'FFF3E9D2',
+  COVER_ACC : 'FFC9982C',
 };
 
 type BorderStyle = ExcelJS.BorderStyle;
@@ -153,7 +156,7 @@ function buildCover(
   ws.mergeCells('B5:F5');
   const tag = ws.getCell('B5');
   tag.value = 'Construction Management & Reporting Platform';
-  tag.font = { italic: true, size: 11, color: { argb: 'FFAABBD4' }, name: 'Calibri' };
+  tag.font = { italic: true, size: 11, color: { argb: 'FFC8C0B0' }, name: 'Calibri' };
   tag.alignment = { horizontal: 'left', vertical: 'middle' };
 
   // Thin cyan rule
@@ -173,7 +176,7 @@ function buildCover(
   ws.mergeCells('B9:F9');
   const rRef = ws.getCell('B9');
   rRef.value = `Reference: ${reportRef}   ·   Date: ${reportDate}`;
-  rRef.font = { size: 10, color: { argb: 'FF88AACC' }, name: 'Calibri' };
+  rRef.font = { size: 10, color: { argb: 'FFB8AE98' }, name: 'Calibri' };
   rRef.alignment = { horizontal: 'left', vertical: 'middle' };
 
   ws.getRow(11).height = 10; // spacer
@@ -495,7 +498,7 @@ export async function exportDailyReportExcel(report: DailyReport, project: Proje
       c.alignment = { vertical: 'middle', indent: 1 };
       c.font = ci % 2 === 1
         ? { bold: true, size: 9, color: { argb: C.NAVY_MID }, name: 'Calibri' }
-        : { bold: true, size: 11, color: { argb: C.GREEN }, name: 'Calibri' };
+        : { bold: true, size: 11, color: { argb: C.GREEN_TEXT }, name: 'Calibri' };
     });
   });
 
@@ -681,7 +684,7 @@ export async function exportMonthlyReportExcel(report: MonthlyReport, project: P
       if (ci===1||ci===3) {
         c.font = { bold: true, size: 9, color: { argb: C.NAVY_MID }, name: 'Calibri' };
       } else {
-        c.font = { bold: true, size: 10, color: { argb: C.CYAN }, name: 'Calibri' };
+        c.font = { bold: true, size: 10, color: { argb: C.GOLD_TEXT }, name: 'Calibri' };
         c.alignment = { horizontal: 'center', vertical: 'middle' };
       }
     });

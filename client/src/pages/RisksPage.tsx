@@ -136,7 +136,7 @@ export default function RisksPage() {
                       </div>
                     );
                   }} />
-                  <Scatter data={scatterData} fill="#3b82f6">
+                  <Scatter data={scatterData} fill="var(--chart-3)">
                     {scatterData.map((entry, i) => (
                       <Cell key={i} fill={RISK_COLORS[entry.level] || '#6b7280'} />
                     ))}
@@ -275,7 +275,7 @@ export default function RisksPage() {
             <label className="label">Description *</label>
             <textarea className="input" rows={2} {...regR('description', { required: true })} />
           </div>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="label">Category</label>
               <select className="input" {...regR('category')}>

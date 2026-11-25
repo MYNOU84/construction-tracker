@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Building2, Lock, Mail, Eye, EyeOff, AlertCircle, PlayCircle } from 'lucide-react';
+import { Lock, Mail, Eye, EyeOff, AlertCircle, PlayCircle, Sun, Moon } from 'lucide-react';
 import { authApi } from '../api/endpoints';
 import { useAuthStore } from '../store/authStore';
+import { useUiStore } from '../store/uiStore';
+import BrandMark from '../components/ui/BrandMark';
 
 interface LoginForm { email: string; password: string; }
 interface AuthConfig { demoMode: boolean; passwordLogin: boolean; registrationOpen: boolean }
@@ -21,6 +23,7 @@ const roleLabel = (r: string) => r.split('_').map(w => w[0] + w.slice(1).toLower
 
 export default function LoginPage() {
   const { login } = useAuthStore();
+  const { theme, toggleTheme } = useUiStore();
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -69,124 +72,174 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-navy-950 via-navy-900 to-primary-900 flex items-center justify-center p-4">
-      {/* Background pattern */}
-      <div className="absolute inset-0 opacity-10" style={{
-        backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-      }} />
+    <div className="min-h-screen grid lg:grid-cols-[1.05fr_1fr]" style={{ background: 'var(--bg-base)' }}>
+      {/* Architectural panel (always black) */}
+      <section className="relative hidden lg:flex flex-col justify-between overflow-hidden p-12 xl:p-16"
+        style={{ background: '#050505', color: '#F5F1E8' }} aria-hidden="true">
+        <div className="absolute inset-0 opacity-[0.55]" style={{
+          backgroundImage:
+            'linear-gradient(rgba(201,152,44,0.07) 1px, transparent 1px), linear-gradient(90deg, rgba(201,152,44,0.07) 1px, transparent 1px)',
+          backgroundSize: '56px 56px',
+        }} />
+        <svg className="absolute -right-24 bottom-0 w-[620px] h-[620px] opacity-[0.22]" viewBox="0 0 400 400" fill="none">
+          <path d="M40 380V170L200 60l160 110v210" stroke="#C9982C" strokeWidth="1.2" />
+          <path d="M100 380V210l100-68 100 68v170" stroke="#C9982C" strokeWidth="0.8" />
+          <path d="M160 380v-120h80v120" stroke="#E0BC63" strokeWidth="0.8" />
+          <path d="M0 380h400" stroke="#7A5A12" strokeWidth="1" />
+          <path d="M200 60v320" stroke="#7A5A12" strokeWidth="0.5" strokeDasharray="4 6" />
+        </svg>
 
-      <div className="w-full max-w-md relative">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-construction-500 rounded-2xl shadow-lg mb-4">
-            <Building2 size={32} className="text-white" />
-          </div>
-          <h1 className="text-3xl font-bold text-white mb-1">BuildTrack Pro</h1>
-          <p className="text-gray-400 text-sm">Construction Progress Management System</p>
+        <div className="relative flex items-center gap-3">
+          <BrandMark size={40} />
+          <span className="font-display text-xl">BuildTrack <span style={{ color: '#E0BC63' }}>Pro</span></span>
         </div>
 
-        {/* Card */}
-        <div className="bg-white rounded-2xl shadow-2xl p-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">{config.passwordLogin ? 'Sign in to your account' : 'Explore the demo'}</h2>
-
-          {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700 text-sm">
-              <AlertCircle size={16} />
-              {error}
-            </div>
-          )}
-
-          {config.passwordLogin && (
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div>
-              <label className="label">Email Address</label>
-              <div className="relative">
-                <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="email"
-                  placeholder="you@example.com"
-                  className="input pl-9"
-                  {...register('email', { required: 'Email is required' })}
-                />
-              </div>
-              {errors.email && <p className="mt-1 text-xs text-red-600">{errors.email.message}</p>}
-            </div>
-
-            <div>
-              <label className="label">Password</label>
-              <div className="relative">
-                <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  type={showPw ? 'text' : 'password'}
-                  placeholder="••••••••"
-                  className="input pl-9 pr-10"
-                  {...register('password', { required: 'Password is required' })}
-                />
-                <button type="button" onClick={() => setShowPw(!showPw)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                  {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
-              {errors.password && <p className="mt-1 text-xs text-red-600">{errors.password.message}</p>}
-            </div>
-
-            <button type="submit" disabled={loading} className="btn-primary w-full btn-lg">
-              {loading ? (
-                <span className="inline-flex items-center gap-2">
-                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Signing in...
-                </span>
-              ) : 'Sign In'}
-            </button>
-          </form>
-          )}
-
-          {/* Public demo: password-less access to read-only demonstration accounts */}
-          {config.demoMode && (
-            <div className={config.passwordLogin ? 'mt-6 pt-6 border-t border-gray-100' : ''}>
-              <p className="text-sm text-gray-600 mb-3">
-                This is a read-only public demonstration. All projects, people and documents are fictional.
-              </p>
-              <div className="grid gap-2">
-                {demoAccounts.map(acc => (
-                  <button key={acc.email} type="button" disabled={loading}
-                    onClick={() => enterDemo(acc.email)}
-                    className="btn-primary w-full justify-start gap-2">
-                    <PlayCircle size={16} />
-                    Explore as {roleLabel(acc.role)}
-                  </button>
-                ))}
-                {demoAccounts.length === 0 && (
-                  <p className="text-xs text-gray-500">Demo accounts are not available right now.</p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Local development: seeded accounts (never included in production builds) */}
-          {config.passwordLogin && DEV_ACCOUNTS.length > 0 && (
-            <div className="mt-6 pt-6 border-t border-gray-100">
-              <p className="text-xs text-gray-500 text-center mb-3">Local development accounts</p>
-              <div className="grid grid-cols-2 gap-2">
-                {DEV_ACCOUNTS.map(acc => (
-                  <button key={acc.label} type="button"
-                    onClick={() => fillDemo(acc.email, acc.pw)}
-                    className="btn-secondary btn-sm text-xs justify-start gap-2">
-                    <span className="w-4 h-4 bg-primary-100 text-primary-700 rounded text-xs flex items-center justify-center font-bold">
-                      {acc.label[0]}
-                    </span>
-                    {acc.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+        <div className="relative max-w-lg">
+          <p className="text-[11px] uppercase mb-5" style={{ color: '#C9982C', letterSpacing: '0.28em' }}>Construction progress management</p>
+          <h1 className="font-display text-5xl xl:text-6xl leading-[1.05] font-semibold" style={{ color: '#F5F1E8' }}>
+            Every site,<br />measured with <em className="not-italic" style={{ color: '#E0BC63' }}>precision.</em>
+          </h1>
+          <div className="w-20 h-px my-8" style={{ background: '#C9982C' }} />
+          <p className="text-[15px] leading-relaxed" style={{ color: 'rgba(245,241,232,0.68)' }}>
+            Daily, weekly and monthly reporting, schedules, HSE, risks and resources in one place.
+          </p>
         </div>
 
-        <p className="text-center text-xs text-gray-500 mt-4">
+        <p className="relative text-xs" style={{ color: 'rgba(245,241,232,0.4)' }}>
           BuildTrack Pro v1.0 — © 2024 All rights reserved
         </p>
-      </div>
+      </section>
+
+      {/* Sign-in panel */}
+      <section className="relative flex items-center justify-center p-5 sm:p-10">
+        <button onClick={toggleTheme} className="icon-btn absolute top-4 right-4"
+          aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+          title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}>
+          {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
+        </button>
+
+        <div className="w-full max-w-[420px] fade-in">
+          {/* Compact brand on small screens */}
+          <div className="lg:hidden flex flex-col items-center text-center mb-8">
+            <BrandMark size={52} />
+            <h1 className="font-display text-3xl mt-4" style={{ color: 'var(--text-1)' }}>
+              BuildTrack <span style={{ color: 'var(--accent)' }}>Pro</span>
+            </h1>
+            <p className="eyebrow mt-2">Construction progress management</p>
+          </div>
+
+          <div className="card !p-7 sm:!p-9">
+            <p className="eyebrow mb-2">{config.passwordLogin ? 'Welcome back' : 'Public demo'}</p>
+            <h2 className="font-display text-[26px] font-semibold mb-6" style={{ color: 'var(--text-1)' }}>
+              {config.passwordLogin ? 'Sign in to your account' : 'Explore the demo'}
+            </h2>
+
+            {error && (
+              <div role="alert" className="mb-4 p-3 rounded-lg flex items-center gap-2 text-sm"
+                style={{ background: 'var(--red-soft)', border: '1px solid color-mix(in srgb, var(--red) 30%, transparent)', color: 'var(--red)' }}>
+                <AlertCircle size={16} className="flex-shrink-0" />
+                {error}
+              </div>
+            )}
+
+            {config.passwordLogin && (
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              <div>
+                <label className="label" htmlFor="login-email">Email Address</label>
+                <div className="relative">
+                  <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-3)' }} />
+                  <input
+                    id="login-email"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="you@example.com"
+                    className="input pl-9 !min-h-[44px]"
+                    {...register('email', { required: 'Email is required' })}
+                  />
+                </div>
+                {errors.email && <p className="mt-1 text-xs" style={{ color: 'var(--red)' }}>{errors.email.message}</p>}
+              </div>
+
+              <div>
+                <label className="label" htmlFor="login-password">Password</label>
+                <div className="relative">
+                  <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-3)' }} />
+                  <input
+                    id="login-password"
+                    type={showPw ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    placeholder="••••••••"
+                    className="input pl-9 pr-10 !min-h-[44px]"
+                    {...register('password', { required: 'Password is required' })}
+                  />
+                  <button type="button" onClick={() => setShowPw(!showPw)}
+                    className="crumb-link absolute right-3 top-1/2 -translate-y-1/2"
+                    aria-label={showPw ? 'Hide password' : 'Show password'}>
+                    {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+                {errors.password && <p className="mt-1 text-xs" style={{ color: 'var(--red)' }}>{errors.password.message}</p>}
+              </div>
+
+              <button type="submit" disabled={loading} className="btn-primary w-full btn-lg !mt-6">
+                {loading ? (
+                  <span className="inline-flex items-center gap-2">
+                    <span className="w-4 h-4 rounded-full animate-spin" style={{ border: '2px solid rgba(5,5,5,0.25)', borderTopColor: '#050505' }} />
+                    Signing in...
+                  </span>
+                ) : 'Sign In'}
+              </button>
+            </form>
+            )}
+
+            {/* Public demo: password-less access to read-only demonstration accounts */}
+            {config.demoMode && (
+              <div className={config.passwordLogin ? 'mt-6 pt-6 border-t' : ''}>
+                <p className="text-sm mb-3" style={{ color: 'var(--text-2)' }}>
+                  This is a read-only public demonstration. All projects, people and documents are fictional.
+                </p>
+                <div className="grid gap-2">
+                  {demoAccounts.map(acc => (
+                    <button key={acc.email} type="button" disabled={loading}
+                      onClick={() => enterDemo(acc.email)}
+                      className="btn-secondary w-full justify-start gap-2">
+                      <PlayCircle size={16} style={{ color: 'var(--accent)' }} />
+                      Explore as {roleLabel(acc.role)}
+                    </button>
+                  ))}
+                  {demoAccounts.length === 0 && (
+                    <p className="text-xs" style={{ color: 'var(--text-3)' }}>Demo accounts are not available right now.</p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Local development: seeded accounts (never included in production builds) */}
+            {config.passwordLogin && DEV_ACCOUNTS.length > 0 && (
+              <div className="mt-6 pt-6 border-t">
+                <p className="text-[10px] uppercase text-center mb-3" style={{ color: 'var(--text-3)', letterSpacing: '0.18em' }}>Local development accounts</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {DEV_ACCOUNTS.map(acc => (
+                    <button key={acc.label} type="button"
+                      onClick={() => fillDemo(acc.email, acc.pw)}
+                      className="btn-secondary btn-sm text-xs justify-start gap-2">
+                      <span className="w-5 h-5 rounded text-[10px] flex items-center justify-center font-bold"
+                        style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>
+                        {acc.label[0]}
+                      </span>
+                      {acc.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <p className="lg:hidden text-center text-xs mt-6" style={{ color: 'var(--text-3)' }}>
+            BuildTrack Pro v1.0 — © 2024 All rights reserved
+          </p>
+        </div>
+      </section>
     </div>
   );
 }

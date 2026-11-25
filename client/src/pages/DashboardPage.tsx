@@ -19,30 +19,30 @@ import {
 type KpiDrill = 'totalProjects' | 'avgProgress' | 'totalReports' | 'completedProjects' | null;
 
 const STATUS_COLORS = {
-  ACTIVE:    '#00d68f',
-  PLANNING:  '#ffb800',
-  ON_HOLD:   '#fb923c',
-  COMPLETED: '#00d4ff',
-  CANCELLED: '#ff4d6d',
+  ACTIVE:    'var(--green)',
+  PLANNING:  'var(--amber)',
+  ON_HOLD:   'var(--orange)',
+  COMPLETED: 'var(--info)',
+  CANCELLED: 'var(--red)',
 };
 
-const GRID_COLOR = 'rgba(255,255,255,0.06)';
+const GRID_COLOR = 'var(--tint-2)';
 const TOOLTIP_STYLE = {
   contentStyle: {
-    background: '#111c3a',
-    border: '1px solid rgba(0,212,255,0.28)',
+    background: 'var(--bg-elevated)',
+    border: '1px solid rgba(201,152,44,0.28)',
     borderRadius: 10,
-    boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+    boxShadow: 'var(--shadow-md)',
   },
-  labelStyle: { color: '#e8eef8', fontWeight: 600 },
-  itemStyle:  { color: '#8899bb' },
+  labelStyle: { color: 'var(--text-1)', fontWeight: 600 },
+  itemStyle:  { color: 'var(--text-2)' },
 };
 
 const KPI_CARDS = [
-  { key: 'totalProjects',    icon: FolderOpen,    label: 'Total Projects',  changeKey: 'activeProjects', changeSuffix: 'active',  grad: 'linear-gradient(135deg,#00d4ff,#0099cc)', glow: 'rgba(0,212,255,0.35)' },
-  { key: 'avgProgress',      icon: TrendingUp,    label: 'Avg. Progress',   change: 'across all projects',                         grad: 'linear-gradient(135deg,#00d68f,#009966)', glow: 'rgba(0,214,143,0.35)' },
-  { key: 'totalReports',     icon: ClipboardList, label: 'Total Reports',   change: 'daily reports filed',                         grad: 'linear-gradient(135deg,#8c3aff,#6020cc)', glow: 'rgba(140,58,255,0.35)' },
-  { key: 'completedProjects',icon: CheckCircle2,  label: 'Completed',       change: 'projects finished',                           grad: 'linear-gradient(135deg,#ff006e,#cc0050)', glow: 'rgba(255,0,110,0.35)' },
+  { key: 'totalProjects',    icon: FolderOpen,    label: 'Total Projects',  changeKey: 'activeProjects', changeSuffix: 'active',  tone: 'var(--accent)' },
+  { key: 'avgProgress',      icon: TrendingUp,    label: 'Avg. Progress',   change: 'across all projects',                         tone: 'var(--info)' },
+  { key: 'totalReports',     icon: ClipboardList, label: 'Total Reports',   change: 'daily reports filed',                         tone: 'var(--violet)' },
+  { key: 'completedProjects',icon: CheckCircle2,  label: 'Completed',       change: 'projects finished',                           tone: 'var(--green)' },
 ];
 
 export default function DashboardPage() {
@@ -84,33 +84,31 @@ export default function DashboardPage() {
       {proj ? (
         <div className="card relative overflow-hidden"
           style={{
-            background: 'linear-gradient(135deg, #0d1428 0%, #111c3a 100%)',
+            background: 'linear-gradient(135deg, var(--bg-card) 0%, var(--bg-surface) 100%)',
             border: '1px solid var(--border-neon)',
             minHeight: 140,
           }}>
 
           {/* Barre de couleur en haut */}
           <div className="absolute top-0 left-0 right-0 h-1"
-            style={{ background: 'linear-gradient(90deg, var(--cyan), var(--violet))' }} />
+            style={{ background: 'linear-gradient(90deg, var(--gold-dark), var(--gold), var(--gold-light))' }} />
 
-          <div className="flex items-start gap-5">
+          <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-5">
 
             {/* Icône projet */}
             <div className="w-16 h-16 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{
-                background: 'linear-gradient(135deg, var(--cyan), var(--violet))',
-                boxShadow: '0 0 24px rgba(0,212,255,0.4)',
-              }}>
-              <Building2 size={28} className="text-white" />
+              style={{ background: '#050505', border: '1px solid rgba(201,152,44,0.55)' }}>
+              <Building2 size={28} strokeWidth={1.5} style={{ color: '#E0BC63' }} />
             </div>
 
             {/* Nom + code + infos */}
             <div className="flex-1 min-w-0">
-              <h2 className="text-xl font-bold mb-0.5" style={{ color: 'var(--text-1)' }}>
+              <p className="eyebrow mb-1">Featured project</p>
+              <h2 className="font-display text-2xl font-semibold mb-0.5" style={{ color: 'var(--text-1)' }}>
                 {proj.name}
               </h2>
               <div className="flex items-center gap-2 mb-3">
-                <p className="text-sm" style={{ color: 'var(--cyan)' }}>{proj.code}</p>
+                <p className="text-sm" style={{ color: 'var(--accent)' }}>{proj.code}</p>
                 <StatusBadge status={proj.status} />
               </div>
 
@@ -131,8 +129,8 @@ export default function DashboardPage() {
             </div>
 
             {/* Avancement — identique à la page Présentation */}
-            <div className="text-right flex-shrink-0">
-              <div className="text-3xl font-bold" style={{ color: 'var(--cyan)' }}>
+            <div className="sm:text-right flex-shrink-0">
+              <div className="font-display text-4xl font-semibold" style={{ color: 'var(--accent)' }}>
                 {proj.progress}%
               </div>
               <div className="text-xs mb-2" style={{ color: 'var(--text-3)' }}>Progress</div>
@@ -146,7 +144,7 @@ export default function DashboardPage() {
 
             <Link to={`/projects/${proj.id}/presentation`}
               className="text-xs flex items-center gap-1"
-              style={{ color: 'var(--cyan)' }}>
+              style={{ color: 'var(--accent)' }}>
               View full presentation <ChevronRight size={12} />
             </Link>
 
@@ -172,13 +170,13 @@ export default function DashboardPage() {
       ) : (
         /* Aucun projet */
         <div className="card relative overflow-hidden"
-          style={{ background: 'linear-gradient(135deg, #0d1428, #111c3a)', border: '1px solid var(--border-neon)', minHeight: 100 }}>
+          style={{ background: 'linear-gradient(135deg, var(--bg-card) 0%, var(--bg-surface) 100%)', border: '1px solid var(--border-neon)', minHeight: 100 }}>
           <div className="absolute top-0 left-0 right-0 h-1"
-            style={{ background: 'linear-gradient(90deg, var(--cyan), var(--violet))' }} />
-          <div className="flex items-center gap-5">
+            style={{ background: 'linear-gradient(90deg, var(--gold-dark), var(--gold), var(--gold-light))' }} />
+          <div className="flex flex-wrap items-center gap-5">
             <div className="w-16 h-16 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ background: 'linear-gradient(135deg, var(--cyan), var(--violet))', opacity: 0.4 }}>
-              <Building2 size={28} className="text-white" />
+              style={{ background: '#050505', border: '1px solid rgba(201,152,44,0.35)', opacity: 0.7 }}>
+              <Building2 size={28} strokeWidth={1.5} style={{ color: '#C9982C' }} />
             </div>
             <div>
               <p className="font-semibold" style={{ color: 'var(--text-2)' }}>No projects</p>
@@ -190,10 +188,10 @@ export default function DashboardPage() {
       )}
 
       {/* ── Welcome ── */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="page-title">
-            {getGreeting()}, <span style={{ color: 'var(--cyan)' }}>{user?.name?.split(' ')[0]}</span>
+            {getGreeting()}, <span style={{ color: 'var(--accent)' }}>{user?.name?.split(' ')[0]}</span>
           </h1>
           <p className="page-subtitle">{formatDate(new Date().toISOString(), 'EEEE, dd MMMM yyyy')} — Construction Dashboard</p>
         </div>
@@ -215,14 +213,14 @@ export default function DashboardPage() {
             <div
               key={card.label}
               className="card kpi-card flex items-center gap-4 relative overflow-hidden cursor-pointer select-none transition-all duration-150"
-              style={isActive ? { boxShadow: `0 0 0 2px ${card.glow.replace('0.35','0.9')}, 0 0 24px ${card.glow}`, transform: 'scale(1.02)' } : undefined}
+              style={isActive ? { boxShadow: `0 0 0 1px ${card.tone}, var(--shadow-md)`, transform: 'translateY(-1px)' } : undefined}
               title="Double-click to drill down"
               onDoubleClick={() => setKpiDrill(isActive ? null : card.key as KpiDrill)}
             >
-              <div className="absolute top-0 left-0 right-0 h-px" style={{ background: card.grad }} />
+              <div className="absolute top-0 left-0 right-0 h-px" style={{ background: `linear-gradient(90deg, ${card.tone}, transparent)` }} />
               <div className="kpi-icon w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-                style={{ background: card.grad, boxShadow: `0 0 22px ${card.glow}, 0 0 44px ${card.glow.replace('0.35', '0.12')}` }}>
-                <card.icon size={22} className="text-white" />
+                style={{ background: `color-mix(in srgb, ${card.tone} 14%, transparent)`, border: `1px solid color-mix(in srgb, ${card.tone} 38%, transparent)` }}>
+                <card.icon size={22} strokeWidth={1.75} style={{ color: card.tone }} />
               </div>
               <div>
                 <p className="text-2xl font-bold" style={{ color: 'var(--text-1)' }}>{String(value)}</p>
@@ -277,7 +275,7 @@ export default function DashboardPage() {
                 <div key={p.id}>
                   <div className="flex justify-between text-sm mb-1">
                     <span className="font-medium truncate max-w-xs" style={{ color: 'var(--text-2)' }}>{p.name}</span>
-                    <span className="font-bold ml-2 flex-shrink-0" style={{ color: 'var(--cyan)' }}>{p.progress ?? 0}%</span>
+                    <span className="font-bold ml-2 flex-shrink-0" style={{ color: 'var(--accent)' }}>{p.progress ?? 0}%</span>
                   </div>
                   <ProgressBar value={p.progress ?? 0} size="sm" />
                 </div>
@@ -294,7 +292,7 @@ export default function DashboardPage() {
                   <p className="font-medium text-sm truncate mb-2" style={{ color: 'var(--text-1)' }}>{p.name}</p>
                   <div className="flex gap-4 text-xs">
                     <Link to={`/projects/${p.id}/reports/daily`} className="text-center hover:opacity-75 transition-opacity">
-                      <div className="text-lg font-bold" style={{ color: 'var(--cyan)' }}>{p._count?.dailyReports ?? 0}</div>
+                      <div className="text-lg font-bold" style={{ color: 'var(--accent)' }}>{p._count?.dailyReports ?? 0}</div>
                       <div style={{ color: 'var(--text-3)' }}>Reports</div>
                     </Link>
                     <Link to={`/projects/${p.id}/schedule`} className="text-center hover:opacity-75 transition-opacity">
@@ -318,7 +316,7 @@ export default function DashboardPage() {
               {projectsList.filter((p: any) => p.status === 'COMPLETED').map((p: any) => (
                 <div key={p.id} className="flex items-center gap-3 p-3 rounded-xl"
                   style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
-                  <CheckCircle2 size={16} style={{ color: 'var(--cyan)', flexShrink: 0 }} />
+                  <CheckCircle2 size={16} style={{ color: 'var(--accent)', flexShrink: 0 }} />
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm truncate" style={{ color: 'var(--text-1)' }}>{p.name}</p>
                     <p className="text-xs" style={{ color: 'var(--text-3)' }}>{p.client || '—'} · {p.location || '—'}</p>
@@ -348,20 +346,20 @@ export default function DashboardPage() {
             <AreaChart data={stats?.manpowerTrend ?? []}>
               <defs>
                 <linearGradient id="mpGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#00d4ff" stopOpacity={0.28} />
-                  <stop offset="95%" stopColor="#00d4ff" stopOpacity={0} />
+                  <stop offset="5%"  stopColor="var(--chart-1)" stopOpacity={0.28} />
+                  <stop offset="95%" stopColor="var(--chart-1)" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
-              <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#4a5f85' }}
+              <XAxis dataKey="date" tick={{ fontSize: 11, fill: 'var(--chart-7)' }}
                 tickFormatter={(d) => formatDate(d, 'dd MMM')} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: '#4a5f85' }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: 'var(--chart-7)' }} axisLine={false} tickLine={false} />
               <Tooltip {...TOOLTIP_STYLE}
                 formatter={(v) => [v, 'Workers']}
                 labelFormatter={(d) => formatDate(d, 'dd MMM yyyy')} />
-              <Area type="monotone" dataKey="manpower" stroke="#00d4ff" strokeWidth={2.5}
+              <Area type="monotone" dataKey="manpower" stroke="var(--chart-1)" strokeWidth={2.5}
                 fill="url(#mpGrad)" dot={false}
-                activeDot={{ r: 5, fill: '#00d4ff', stroke: '#0a0e1f', strokeWidth: 2 }} />
+                activeDot={{ r: 5, fill: 'var(--chart-1)', stroke: 'var(--bg-card)', strokeWidth: 2 }} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -377,12 +375,12 @@ export default function DashboardPage() {
                 paddingAngle={4} dataKey="value" strokeWidth={0}>
                 {pieData.map((entry) => (
                   <Cell key={entry.name}
-                    fill={STATUS_COLORS[entry.name as keyof typeof STATUS_COLORS] || '#4a5f85'} />
+                    fill={STATUS_COLORS[entry.name as keyof typeof STATUS_COLORS] || 'var(--chart-7)'} />
                 ))}
               </Pie>
               <Tooltip {...TOOLTIP_STYLE} formatter={(v, n) => [v, getStatusLabel(String(n))]} />
               <Legend formatter={(v) => getStatusLabel(v)} iconType="circle"
-                wrapperStyle={{ fontSize: 11, color: '#8899bb' }} />
+                wrapperStyle={{ fontSize: 11, color: 'var(--text-2)' }} />
             </PieChart>
           </ResponsiveContainer>
         </div>
@@ -420,7 +418,7 @@ export default function DashboardPage() {
                   <td>
                     <div className="flex items-center gap-2 min-w-[120px]">
                       <ProgressBar value={p.progress} className="flex-1" size="sm" />
-                      <span className="text-xs font-medium w-8" style={{ color: 'var(--cyan)' }}>{p.progress}%</span>
+                      <span className="text-xs font-medium w-8" style={{ color: 'var(--accent)' }}>{p.progress}%</span>
                     </div>
                   </td>
                   <td className="text-xs" style={{ color: 'var(--text-3)' }}>{formatDate(p.endDate)}</td>

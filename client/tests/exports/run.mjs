@@ -144,6 +144,7 @@ function parsePdf(bytes) {
     if (/\/Filter/.test(objs.get(contentsId).split('stream')[0])) throw new Error('compressed stream');
     const texts = [];
     const fills = new Set();
+    const rects = [];
     let font = '';
     let size = 0;
     let fill = '';
@@ -160,6 +161,12 @@ function parsePdf(bytes) {
           fill = `${r},${g},${b}`; fills.add(fill); stack.length = 0; break;
         }
         case 'g': { const v = Math.round(Number(stack.pop()) * 255); fill = `${v},${v},${v}`; fills.add(fill); stack.length = 0; break; }
+        case 're': {
+          const [rx, ry, rw, rh] = stack.splice(-4).map(Number);
+          rects.push({ x: round(rx), y: round(ry), w: round(rw), h: round(rh), fill });
+          stack.length = 0;
+          break;
+        }
         case 'Tj': {
           const raw = stack.pop();
           texts.push({ x, y, font, size, color: fill, text: unescapePdf(raw.slice(1, -1)) });
@@ -170,7 +177,10 @@ function parsePdf(bytes) {
           if (/^[a-zA-Z*'"]+$/.test(t)) stack.length = 0; else stack.push(t);
       }
     }
-    return { mediaBox, texts, fills: [...fills].sort() };
+    // Rectangles stay out of the JSON snapshot (non-enumerable); tests read them directly.
+    const result = { mediaBox, texts, fills: [...fills].sort() };
+    Object.defineProperty(result, 'rects', { value: rects, enumerable: false });
+    return result;
   });
 }
 
@@ -267,8 +277,9 @@ const num = (n) => n.toLocaleString();
   check('daily signatures on last page', pageText(pages.at(-1)).includes('APPROVALS & SIGNATURES'));
   check('daily signature date', pageText(pages.at(-1)).includes('12/03/2026'));
   check('daily footer every page', pages.every((p, i) => pageText(p).includes(`Page ${i + 1} / ${pages.length}`)));
-  check('daily navy header fill', hasFill(pages[0], [15, 28, 51]));
-  check('daily primary fill', hasFill(pages[0], [30, 64, 175]));
+  check('daily ink header fill', hasFill(pages[0], [10, 10, 11]));
+  check('daily charcoal banner fill', hasFill(pages[0], [23, 23, 26]));
+  check('daily gold accent fill', hasFill(pages[0], [201, 152, 44]));
   check('daily delay section red', pages.some((p) => hasFill(p, [220, 38, 38])));
 }
 
@@ -324,17 +335,21 @@ const num = (n) => n.toLocaleString();
   check('monthly title', has(pages, 'Monthly Report — March 2026'));
   check('monthly avg workers 1 decimal', t[t.indexOf('Avg Daily Workers') + 1] === '57.2', t[t.indexOf('Avg Daily Workers') + 1]);
   const bars = { Structure: 63, Architecture: 18, Mechanical: 22, Electrical: 14, Plumbing: 0, Infrastructure: 100 };
-  for (const [name, pct] of Object.entries(bars)) {
+  // WP3/WP4: progress bars are drawn as vector rectangles (warm track + gold fill),
+  // replacing the block-character bars the standard PDF fonts could not encode.
+  const barRects = pages.flatMap((p, pi) => p.rects.map((r) => ({ ...r, pi })));
+  const tracks = barRects.filter((r) => near(r.fill, [232, 226, 212])).sort((a, b) => a.pi - b.pi || b.y - a.y);
+  const golds = barRects.filter((r) => near(r.fill, [201, 152, 44]) && tracks.some((tr) => tr.pi === r.pi && tr.y === r.y && tr.x === r.x));
+  check('monthly bar tracks drawn', tracks.length === Object.keys(bars).length, tracks.length);
+  Object.entries(bars).forEach(([name, pct], k) => {
     const i = t.indexOf(name);
-    const bar = t[i + 2] ?? '';
     check(`monthly ${name} ${pct}%`, t[i + 1] === `${pct}%`, t[i + 1]);
-    // Pre-existing limitation, recorded as is: the source draws the bar with
-    // █ (U+2588) and ░ (U+2591), which the standard PDF fonts cannot encode;
-    // jsPDF writes each as two Latin glyphs ("%ˆ" filled, "%‘" empty).
-    const full = Math.round(pct / 5);
-    check(`monthly ${name} bar ${full}/20 filled`, bar === '%ˆ'.repeat(full) + '%‘'.repeat(20 - full), JSON.stringify(bar));
-  }
-  check('monthly bars in courier 7pt', pages.flatMap((p) => p.texts).filter((x) => /^(%ˆ|%‘){20}$/.test(x.text)).every((x) => x.size === 7 && x.font !== '/F1'));
+    const track = tracks[k];
+    const gold = track && golds.find((g) => g.pi === track.pi && g.y === track.y);
+    const filled = gold ? Math.round((gold.w / track.w) * 100) : 0;
+    check(`monthly ${name} bar ${pct}% filled`, filled === pct && (pct > 0) === !!gold, filled);
+  });
+  check('monthly no block-glyph bars', !allText(pages).some((x) => /%ˆ|%‘|█|░/.test(x)));
   check('monthly milestones', ['4', '6', '1'].every((s) => has(pages, s)) && ['Achieved', 'Pending', 'Delayed'].every((s) => has(pages, s)));
   check('monthly budget', has(pages, `${num(4825000)} USD`) && has(pages, `${num(12740000)} USD`) && has(pages, `${num(-240000)} USD`));
   for (const s of ['KEY PERFORMANCE INDICATORS', 'PROGRESS BY DISCIPLINE', 'MILESTONES', 'FINANCIAL STATUS', 'EXECUTIVE SUMMARY', 'KEY ACHIEVEMENTS', 'MAJOR CHALLENGES', 'NEXT MONTH PLAN']) {
@@ -365,8 +380,8 @@ const num = (n) => n.toLocaleString();
   check('presentation approval labels', has(pages, 'Approved') && has(pages, 'Draft'));
   // Existing behaviour: the header total counts one page more than is produced.
   check('presentation header numbering (unchanged)', has(pages, 'Page 2 / 7'));
-  check('presentation cyan accent', hasFill(pages[0], [0, 212, 255]));
-  check('presentation navy background', pages.every((p) => hasFill(p, [10, 14, 31])));
+  check('presentation gold accent', hasFill(pages[0], [201, 152, 44]));
+  check('presentation ink background', pages.every((p) => hasFill(p, [10, 10, 11])));
 }
 
 // Presentation PDF, cover only
@@ -391,13 +406,13 @@ const num = (n) => n.toLocaleString();
   check('daily xlsx creator', wbx.creator === 'BuildTrack Pro');
   const cover = sheet(wbx, 'COVER');
   check('cover title', cell(cover, 'B4')?.v === 'BUILDTRACK PRO');
-  check('cover title style', cell(cover, 'B4')?.font === 'b||28|FF00D4FF');
+  check('cover title style', cell(cover, 'B4')?.font === 'b||28|FFC9982C');
   check('cover merges', ['B4:F4', 'B5:F5', 'B8:F8', 'B9:F9', 'B12:F12'].every((m) => cover.merges.includes(m)));
-  check('cover accent bar', cell(cover, 'A1')?.fill === 'FF00D4FF' && cell(cover, 'G1')?.fill === 'FF00D4FF');
+  check('cover accent bar', cell(cover, 'A1')?.fill === 'FFC9982C' && cell(cover, 'G1')?.fill === 'FFC9982C');
   check('cover reference', cell(cover, 'B9')?.v === 'Reference: Report #57   ·   Date: 12 March 2026');
   check('cover budget', cell(cover, 'F17')?.v === num(12500000), cell(cover, 'F17')?.v);
   check('cover export date', rowValues(cover).flat().includes('01 April 2026'));
-  check('cover confidential red', cover.rows.flatMap((r) => r.cells).find((c) => c.v === 'CONFIDENTIAL')?.font?.endsWith('FFFF4D6D'));
+  check('cover confidential red', cover.rows.flatMap((r) => r.cells).find((c) => c.v === 'CONFIDENTIAL')?.font?.endsWith('FFC9474F'));
   check('cover TOC lists 7 sheets', [27, 28, 29, 30, 31, 32, 33].map((r) => cell(cover, `C${r}`)?.v).join() === 'COVER,SUMMARY,MANPOWER,EQUIPMENT,MATERIALS,ACTIVITIES,DELAYS');
   const summ = sheet(wbx, 'SUMMARY');
   check('summary title', cell(summ, 'A1')?.v === 'DAILY SITE REPORT — SUMMARY');
@@ -411,13 +426,13 @@ const num = (n) => n.toLocaleString();
   check('manpower translated', rowValues(man).some((r) => r[1] === 'Masons' && r[4] === 18));
   const total = man.rows.at(-1);
   check('manpower total row', total.cells.find((c) => c.a.startsWith('E'))?.v === 64 && total.cells[0].v === '∑');
-  check('manpower total style', total.cells[0].fill === 'FFE2EFF8' && total.cells[0].border === 'medium');
-  check('manpower zebra rows', cell(man, 'B3')?.fill === 'FFFFFFFF' && cell(man, 'B4')?.fill === 'FFF0F5FA');
-  check('manpower header fill', cell(man, 'A2')?.fill === 'FF1E3A5F');
+  check('manpower total style', total.cells[0].fill === 'FFF3E9D2' && total.cells[0].border === 'medium');
+  check('manpower zebra rows', cell(man, 'B3')?.fill === 'FFFFFFFF' && cell(man, 'B4')?.fill === 'FFF8F4EA');
+  check('manpower header fill', cell(man, 'A2')?.fill === 'FF1F1F23');
   check('equipment default count', rowValues(sheet(wbx, 'EQUIPMENT')).some((r) => r[1] === 'Concrete pump' && r[2] === 2));
   check('materials numeric qty', rowValues(sheet(wbx, 'MATERIALS')).some((r) => r[1] === 'Rebar T16' && r[2] === 12.5));
   check('activities progress', rowValues(sheet(wbx, 'ACTIVITIES')).some((r) => r[4] === 100 && r[5] === 'COMPLETED'));
-  check('delays tab red', sheet(wbx, 'DELAYS').tab === 'FFFF4D6D');
+  check('delays tab red', sheet(wbx, 'DELAYS').tab === 'FFC9474F');
 }
 
 // Daily Excel, no optional sheets

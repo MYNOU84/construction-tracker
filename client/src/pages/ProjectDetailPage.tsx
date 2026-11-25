@@ -46,18 +46,18 @@ export default function ProjectDetailPage() {
   return (
     <div className="space-y-6 fade-in">
       {/* Header */}
-      <div className="card bg-gradient-to-r from-navy-900 to-primary-800 text-white">
+      <div className="card hero-card text-white">
         <div className="flex flex-wrap gap-4 items-start justify-between">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="badge bg-white/20 text-white text-xs">{project.code}</span>
               <StatusBadge status={project.status} />
             </div>
-            <h1 className="text-2xl font-bold text-white mb-2">{project.name}</h1>
+            <h1 className="font-display text-2xl sm:text-3xl font-semibold text-white mb-2">{project.name}</h1>
             <p className="text-white/70 text-sm max-w-xl">{project.description}</p>
           </div>
           <div className="flex gap-3 flex-wrap">
-            <Link to="reports/daily/new" className="btn bg-construction-500 text-white hover:bg-construction-600">
+            <Link to="reports/daily/new" className="btn-primary">
               <ClipboardList size={16} /> New Report
             </Link>
             <Link to="reports/daily" className="btn bg-white/10 text-white hover:bg-white/20">
@@ -67,7 +67,7 @@ export default function ProjectDetailPage() {
         </div>
 
         {/* Progress Bar */}
-        <div className="mt-6 grid grid-cols-2 gap-6">
+        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-6">
           <div>
             <div className="flex justify-between text-sm text-white/80 mb-2">
               <span>Overall Progress</span>

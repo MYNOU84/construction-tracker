@@ -153,7 +153,7 @@ export default function ProjectsPage() {
               <input type="date" className="input" {...register('endDate', { required: true })} />
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="label">Status</label>
               <select className="input" {...register('status')}>

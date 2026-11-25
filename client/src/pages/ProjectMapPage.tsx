@@ -19,26 +19,26 @@ const PAD = 16;
 
 /* ── Color helpers ── */
 function cellFill(p: number) {
-  if (p === 0)   return '#0d1428';
-  if (p < 25)    return 'rgba(255,77,109,0.18)';
-  if (p < 50)    return 'rgba(255,184,0,0.18)';
-  if (p < 75)    return 'rgba(0,212,255,0.18)';
-  if (p < 100)   return 'rgba(0,214,143,0.18)';
-  return 'rgba(0,214,143,0.32)';
+  if (p === 0)   return 'var(--bg-surface)';
+  if (p < 25)    return 'rgba(229,99,106,0.18)';
+  if (p < 50)    return 'rgba(230,176,74,0.18)';
+  if (p < 75)    return 'rgba(201,152,44,0.18)';
+  if (p < 100)   return 'rgba(91,191,138,0.18)';
+  return 'rgba(91,191,138,0.32)';
 }
 function cellStroke(p: number) {
-  if (p === 0)   return '#1e2d50';
-  if (p < 25)    return '#ff4d6d';
-  if (p < 50)    return '#ffb800';
-  if (p < 75)    return '#00d4ff';
-  return '#00d68f';
+  if (p === 0)   return 'var(--border-md)';
+  if (p < 25)    return 'var(--red)';
+  if (p < 50)    return 'var(--amber)';
+  if (p < 75)    return 'var(--chart-1)';
+  return 'var(--green)';
 }
 function cellTextColor(p: number) {
-  if (p === 0)   return '#4a5f85';
-  if (p < 25)    return '#ff4d6d';
-  if (p < 50)    return '#ffb800';
-  if (p < 75)    return '#00d4ff';
-  return '#00d68f';
+  if (p === 0)   return 'var(--chart-7)';
+  if (p < 25)    return 'var(--red)';
+  if (p < 50)    return 'var(--amber)';
+  if (p < 75)    return 'var(--chart-1)';
+  return 'var(--green)';
 }
 
 interface GridCell {
@@ -171,11 +171,11 @@ export default function ProjectMapPage() {
 
   /* ── Status legend ── */
   const legend = [
-    { label: 'Not Started', color: '#4a5f85' },
-    { label: '< 25%',       color: '#ff4d6d' },
-    { label: '< 50%',       color: '#ffb800' },
-    { label: '< 75%',       color: '#00d4ff' },
-    { label: 'Completed',   color: '#00d68f' },
+    { label: 'Not Started', color: 'var(--chart-7)' },
+    { label: '< 25%',       color: 'var(--red)' },
+    { label: '< 50%',       color: 'var(--amber)' },
+    { label: '< 75%',       color: 'var(--chart-1)' },
+    { label: 'Completed',   color: 'var(--green)' },
   ];
 
   /* ── Filter helper ── */
@@ -230,11 +230,11 @@ export default function ProjectMapPage() {
       {/* ── Header ── */}
       <div className="flex items-center justify-between flex-shrink-0">
         <div>
-          <h1 className="page-title flex items-center gap-2"><MapPin size={20} style={{ color: 'var(--cyan)' }} /> Site Map</h1>
+          <h1 className="page-title flex items-center gap-2"><MapPin size={20} style={{ color: 'var(--accent)' }} /> Site Map</h1>
           <p className="page-subtitle">{project?.name} — Interactive works extent</p>
         </div>
         <div className="flex items-center gap-3 text-xs" style={{ color: 'var(--text-3)' }}>
-          <span><span style={{ color: 'var(--cyan)', fontWeight: 700 }}>{zoneLabels.length}</span> zones</span>
+          <span><span style={{ color: 'var(--accent)', fontWeight: 700 }}>{zoneLabels.length}</span> zones</span>
           <span><span style={{ color: 'var(--violet)', fontWeight: 700 }}>{levelLabels.length}</span> levels</span>
           <span><span style={{ color: 'var(--green)', fontWeight: 700 }}>{avgProg}%</span> avg. progress</span>
         </div>
@@ -243,7 +243,7 @@ export default function ProjectMapPage() {
       {/* ── Filters + Zoom controls ── */}
       <div className="rounded-xl px-4 py-3 flex gap-3 flex-wrap items-center flex-shrink-0"
         style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-        <Filter size={13} style={{ color: 'var(--cyan)', flexShrink: 0 }} />
+        <Filter size={13} style={{ color: 'var(--accent)', flexShrink: 0 }} />
         <span className="text-xs font-semibold flex-shrink-0" style={{ color: 'var(--text-2)' }}>Filters:</span>
 
         {/* Zone filter */}
@@ -291,7 +291,7 @@ export default function ProjectMapPage() {
 
         {hasFilters && (
           <button className="btn-secondary btn-sm text-xs flex items-center gap-1 self-end"
-            style={{ color: 'var(--pink)', borderColor: 'rgba(255,0,110,0.3)' }}
+            style={{ color: 'var(--red)', borderColor: 'rgba(229,99,106,0.3)' }}
             onClick={clearFilters}>
             <X size={11} /> Effacer
           </button>
@@ -300,7 +300,7 @@ export default function ProjectMapPage() {
         <div className="ml-auto flex items-center gap-1 flex-shrink-0">
           <button onClick={() => setShowLegend(s => !s)} title="Afficher/masquer la légende"
             className="btn-secondary btn-sm p-2"
-            style={{ color: showLegend ? 'var(--cyan)' : 'var(--text-3)', borderColor: showLegend ? 'rgba(0,212,255,0.3)' : undefined }}>
+            style={{ color: showLegend ? 'var(--accent)' : 'var(--text-3)', borderColor: showLegend ? 'rgba(201,152,44,0.3)' : undefined }}>
             <Layers size={13} />
           </button>
           <button onClick={() => setScale(s => Math.min(4, s * 1.2))} title="Zoom +" className="btn-secondary btn-sm p-2"><ZoomIn size={13} /></button>
@@ -320,7 +320,7 @@ export default function ProjectMapPage() {
           {/* Legend (toggleable) */}
           {showLegend && (
             <div className="absolute top-3 left-3 z-10 rounded-lg px-3 py-2 space-y-1"
-              style={{ background: 'rgba(10,14,31,0.92)', border: '1px solid rgba(0,212,255,0.2)', backdropFilter: 'blur(10px)', minWidth: 140 }}>
+              style={{ background: 'color-mix(in srgb, var(--bg-card) 94%, transparent)', border: '1px solid rgba(201,152,44,0.2)', backdropFilter: 'blur(10px)', minWidth: 140 }}>
               <div className="flex items-center justify-between mb-1">
                 <p className="text-xs font-semibold" style={{ color: 'var(--text-2)' }}>Legend</p>
                 <button onClick={() => setShowLegend(false)}
@@ -331,7 +331,7 @@ export default function ProjectMapPage() {
               </div>
               {legend.map(({ label, color }) => (
                 <div key={label} className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-sm flex-shrink-0" style={{ background: color, boxShadow: `0 0 6px ${color}66` }} />
+                  <div className="w-3 h-3 rounded-sm flex-shrink-0" style={{ background: color, boxShadow: `0 0 0 1px ${color}` }} />
                   <span className="text-xs" style={{ color: 'var(--text-3)' }}>{label}</span>
                 </div>
               ))}
@@ -364,11 +364,11 @@ export default function ProjectMapPage() {
                 return (
                   <g key={zone}>
                     <rect x={LW + col * CW + 2} y={0} width={CW - 4} height={LH - 4} rx={4}
-                      fill={isFiltered ? 'rgba(255,255,255,0.02)' : 'rgba(0,212,255,0.1)'}
-                      stroke={isFiltered ? '#1e2d50' : 'rgba(0,212,255,0.3)'} strokeWidth={0.5} />
+                      fill={isFiltered ? 'var(--tint-1)' : 'rgba(201,152,44,0.1)'}
+                      stroke={isFiltered ? 'var(--border-md)' : 'rgba(201,152,44,0.3)'} strokeWidth={0.5} />
                     <text x={x} y={LH / 2 + 1} textAnchor="middle" dominantBaseline="middle"
                       fontSize={11} fontWeight="700"
-                      fill={isFiltered ? '#2a3f6a' : '#00d4ff'}>
+                      fill={isFiltered ? 'var(--text-3)' : 'var(--chart-1)'}>
                       {zone}
                     </text>
                   </g>
@@ -382,11 +382,11 @@ export default function ProjectMapPage() {
                 return (
                   <g key={level}>
                     <rect x={0} y={LH + row * CH + 2} width={LW - 4} height={CH - 4} rx={4}
-                      fill={isFiltered ? 'rgba(255,255,255,0.02)' : 'rgba(140,58,255,0.1)'}
-                      stroke={isFiltered ? '#1e2d50' : 'rgba(140,58,255,0.3)'} strokeWidth={0.5} />
+                      fill={isFiltered ? 'var(--tint-1)' : 'rgba(168,148,214,0.1)'}
+                      stroke={isFiltered ? 'var(--border-md)' : 'rgba(168,148,214,0.3)'} strokeWidth={0.5} />
                     <text x={LW / 2} y={y} textAnchor="middle" dominantBaseline="middle"
                       fontSize={10} fontWeight="700"
-                      fill={isFiltered ? '#2a3f6a' : '#8c3aff'}>
+                      fill={isFiltered ? 'var(--text-3)' : 'var(--chart-6)'}>
                       {level}
                     </text>
                   </g>
@@ -402,9 +402,9 @@ export default function ProjectMapPage() {
                   const h = CH - 4;
                   const visible = isVisible(cell);
                   const isSelected = selected?.zone === cell.zone && selected?.level === cell.level;
-                  const fill   = visible ? cellFill(cell.progress)   : 'rgba(255,255,255,0.01)';
-                  const stroke = visible ? cellStroke(cell.progress) : '#1e2d50';
-                  const tcolor = visible ? cellTextColor(cell.progress) : '#1e2d50';
+                  const fill   = visible ? cellFill(cell.progress)   : 'var(--tint-1)';
+                  const stroke = visible ? cellStroke(cell.progress) : 'var(--border-md)';
+                  const tcolor = visible ? cellTextColor(cell.progress) : 'var(--border-md)';
                   const sw = isSelected ? 2 : 0.6;
 
                   return (
@@ -429,7 +429,7 @@ export default function ProjectMapPage() {
                       )}
                       {visible && (
                         <rect x={x + 4} y={y + h - 8} width={w - 8} height={3} rx={1.5}
-                          fill="rgba(255,255,255,0.06)" />
+                          fill="var(--tint-2)" />
                       )}
 
                       {/* Zone label */}
@@ -438,7 +438,7 @@ export default function ProjectMapPage() {
                       </text>
 
                       {/* Level label */}
-                      <text x={x + 7} y={y + 26} fontSize={8} fill={visible ? 'rgba(232,238,248,0.5)' : '#1e2d50'}>
+                      <text x={x + 7} y={y + 26} fontSize={8} fill={visible ? 'var(--text-3)' : 'var(--border-md)'}>
                         {cell.level}
                       </text>
 
@@ -459,13 +459,13 @@ export default function ProjectMapPage() {
                 <line key={`vl-${ci}`}
                   x1={LW + (ci + 1) * CW} y1={LH}
                   x2={LW + (ci + 1) * CW} y2={LH + levelLabels.length * CH}
-                  stroke="rgba(255,255,255,0.04)" strokeWidth={0.5} />
+                  stroke="var(--tint-1)" strokeWidth={0.5} />
               ))}
               {levelLabels.map((_, ri) => (
                 <line key={`hl-${ri}`}
                   x1={LW} y1={LH + (ri + 1) * CH}
                   x2={LW + zoneLabels.length * CW} y2={LH + (ri + 1) * CH}
-                  stroke="rgba(255,255,255,0.04)" strokeWidth={0.5} />
+                  stroke="var(--tint-1)" strokeWidth={0.5} />
               ))}
             </g>
           </svg>
@@ -488,7 +488,7 @@ export default function ProjectMapPage() {
                 style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)' }}>
                 <div>
                   <p className="font-bold text-sm" style={{ color: 'var(--text-1)' }}>
-                    Zone <span style={{ color: 'var(--cyan)' }}>{selected.zone}</span>
+                    Zone <span style={{ color: 'var(--accent)' }}>{selected.zone}</span>
                     {' — '}<span style={{ color: 'var(--violet)' }}>{selected.level}</span>
                   </p>
                   <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>
@@ -541,7 +541,7 @@ export default function ProjectMapPage() {
                           <p className="text-xs" style={{ color: 'var(--text-3)' }}>{eq.category}</p>
                         </div>
                         <span className="text-xs px-2 py-0.5 rounded-full"
-                          style={{ background: 'rgba(0,214,143,0.1)', color: 'var(--green)', border: '1px solid rgba(0,214,143,0.2)' }}>
+                          style={{ background: 'rgba(91,191,138,0.1)', color: 'var(--green)', border: '1px solid rgba(91,191,138,0.2)' }}>
                           Active
                         </span>
                       </div>
@@ -560,7 +560,7 @@ export default function ProjectMapPage() {
                 {/* Personnel section */}
                 <div>
                   <div className="flex items-center gap-2 mb-2">
-                    <Users size={13} style={{ color: 'var(--cyan)' }} />
+                    <Users size={13} style={{ color: 'var(--accent)' }} />
                     <span className="text-xs font-semibold" style={{ color: 'var(--text-2)' }}>
                       Active Personnel ({personnel.filter(p => p.status === 'ACTIVE').length})
                     </span>
@@ -570,7 +570,7 @@ export default function ProjectMapPage() {
                       <div key={p.id} className="flex items-center gap-3 rounded-lg px-3 py-2"
                         style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
                         <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold"
-                          style={{ background: p.type === 'DIRECT' ? 'rgba(0,212,255,0.15)' : 'rgba(255,184,0,0.15)', color: p.type === 'DIRECT' ? 'var(--cyan)' : 'var(--amber)' }}>
+                          style={{ background: p.type === 'DIRECT' ? 'rgba(201,152,44,0.15)' : 'rgba(230,176,74,0.15)', color: p.type === 'DIRECT' ? 'var(--accent)' : 'var(--amber)' }}>
                           {p.fullName.charAt(0)}
                         </div>
                         <div className="min-w-0">
@@ -578,7 +578,7 @@ export default function ProjectMapPage() {
                           <p className="text-xs truncate" style={{ color: 'var(--text-3)' }}>{p.trade || p.position || '—'}</p>
                         </div>
                         <span className="text-xs flex-shrink-0"
-                          style={{ color: p.type === 'DIRECT' ? 'var(--cyan)' : 'var(--amber)' }}>
+                          style={{ color: p.type === 'DIRECT' ? 'var(--accent)' : 'var(--amber)' }}>
                           {p.type === 'DIRECT' ? 'D' : 'I'}
                         </span>
                       </div>
@@ -602,11 +602,11 @@ export default function ProjectMapPage() {
       {/* ── Stats bar ── */}
       <div className="flex gap-4 flex-shrink-0 text-xs" style={{ color: 'var(--text-3)' }}>
         {[
-          { label: 'Not Started',     value: allCells.filter(c => c.progress === 0).length,              color: '#4a5f85' },
-          { label: 'In Progress',    value: allCells.filter(c => c.progress > 0 && c.progress < 100).length, color: '#00d4ff' },
-          { label: 'Completed',      value: allCells.filter(c => c.progress === 100).length,             color: '#00d68f' },
-          { label: 'Equipment',      value: equipment.length,                                            color: '#ffb800' },
-          { label: 'Active Personnel',value: personnel.filter(p => p.status === 'ACTIVE').length,       color: '#8c3aff' },
+          { label: 'Not Started',     value: allCells.filter(c => c.progress === 0).length,              color: 'var(--chart-7)' },
+          { label: 'In Progress',    value: allCells.filter(c => c.progress > 0 && c.progress < 100).length, color: 'var(--chart-1)' },
+          { label: 'Completed',      value: allCells.filter(c => c.progress === 100).length,             color: 'var(--green)' },
+          { label: 'Equipment',      value: equipment.length,                                            color: 'var(--amber)' },
+          { label: 'Active Personnel',value: personnel.filter(p => p.status === 'ACTIVE').length,       color: 'var(--chart-6)' },
         ].map(({ label, value, color }) => (
           <div key={label} className="flex items-center gap-1.5">
             <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: color }} />

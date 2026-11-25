@@ -110,12 +110,12 @@ export default function HSEPage() {
         ) : (
           <ResponsiveContainer width="100%" height={220}>
             <LineChart data={trendData} margin={{ left: 0, right: 10 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" />
               <XAxis dataKey="date" tick={{ fontSize: 10 }} />
               <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
               <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
               <Legend wrapperStyle={{ fontSize: 12 }} />
-              <Line type="monotone" dataKey="Toolbox Talks" stroke="#3b82f6" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="Toolbox Talks" stroke="var(--chart-3)" strokeWidth={2} dot={false} />
               <Line type="monotone" dataKey="Inductions" stroke="#8b5cf6" strokeWidth={2} dot={false} />
               <Line type="monotone" dataKey="LTI" stroke="#ef4444" strokeWidth={2} dot={{ r: 4 }} />
               <Line type="monotone" dataKey="Lost Hours" stroke="#f59e0b" strokeWidth={2} dot={false} />

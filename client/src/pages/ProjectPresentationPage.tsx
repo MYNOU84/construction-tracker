@@ -45,7 +45,7 @@ const BILLING_CFG: Record<string, { label: string; color: string }> = {
 };
 const PLAN_CFG: Record<string, { label: string; color: string }> = {
   DRAFT:      { label: 'Draft',      color: 'var(--text-3)' },
-  ISSUED:     { label: 'Issued',     color: 'var(--cyan)'   },
+  ISSUED:     { label: 'Issued',     color: 'var(--accent)'   },
   APPROVED:   { label: 'Approved',   color: 'var(--green)'  },
   FOR_INFO:   { label: 'For Info',   color: 'var(--amber)'  },
   SUPERSEDED: { label: 'Superseded', color: 'var(--red)'    },
@@ -103,7 +103,7 @@ export default function ProjectPresentationPage() {
               <Save size={15} />{saveMutation.isPending ? 'Saving...' : 'Save'}
             </button>
           )}
-          {saved && <span className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg" style={{ color: 'var(--green)', background: 'rgba(0,214,143,0.1)', border: '1px solid rgba(0,214,143,0.2)' }}><CheckCircle2 size={13} /> Saved</span>}
+          {saved && <span className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg" style={{ color: 'var(--green)', background: 'rgba(91,191,138,0.1)', border: '1px solid rgba(91,191,138,0.2)' }}><CheckCircle2 size={13} /> Saved</span>}
           <button onClick={() => exportPresentationPDF(project, data)} className="btn-secondary">
             <FileDown size={15} /> Export PDF
           </button>
@@ -116,7 +116,7 @@ export default function ProjectPresentationPage() {
           <button key={t.id} onClick={() => setTab(t.id)}
             className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200"
             style={tab === t.id
-              ? { background: 'rgba(0,212,255,0.12)', color: 'var(--cyan)', border: '1px solid rgba(0,212,255,0.25)' }
+              ? { background: 'rgba(201,152,44,0.12)', color: 'var(--accent)', border: '1px solid rgba(201,152,44,0.25)' }
               : { color: 'var(--text-3)', border: '1px solid transparent' }}>
             <t.icon size={13} />
             <span className="hidden sm:inline">{t.label}</span>
@@ -128,15 +128,15 @@ export default function ProjectPresentationPage() {
       {tab === 'cover' && (
         <div className="space-y-5">
           {/* Cover preview card */}
-          <div className="card relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #0d1428 0%, #111c3a 100%)', border: '1px solid var(--border-neon)', minHeight: 220 }}>
-            <div className="absolute top-0 left-0 right-0 h-1" style={{ background: 'linear-gradient(90deg, var(--cyan), var(--violet))' }} />
-            <div className="flex items-start gap-5">
-              <div className="w-16 h-16 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg, var(--cyan), var(--violet))', boxShadow: '0 0 24px rgba(0,212,255,0.4)' }}>
-                <Building2 size={28} className="text-white" />
+          <div className="card relative overflow-hidden" style={{ background: 'linear-gradient(135deg, var(--bg-card) 0%, var(--bg-surface) 100%)', border: '1px solid var(--border-neon)', minHeight: 220 }}>
+            <div className="absolute top-0 left-0 right-0 h-1" style={{ background: 'linear-gradient(90deg, var(--gold-dark), var(--gold), var(--gold-light))' }} />
+            <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-5">
+              <div className="w-16 h-16 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: '#050505', border: '1px solid rgba(201,152,44,0.55)' }}>
+                <Building2 size={28} strokeWidth={1.5} style={{ color: '#E0BC63' }} />
               </div>
               <div className="flex-1">
-                <h2 className="text-xl font-bold mb-0.5" style={{ color: 'var(--text-1)' }}>{project.name}</h2>
-                <p className="text-sm mb-3" style={{ color: 'var(--cyan)' }}>{project.code}</p>
+                <h2 className="font-display text-2xl font-semibold mb-0.5" style={{ color: 'var(--text-1)' }}>{project.name}</h2>
+                <p className="text-sm mb-3" style={{ color: 'var(--accent)' }}>{project.code}</p>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
                   {[
                     { l: 'Client', v: project.client },
@@ -152,7 +152,7 @@ export default function ProjectPresentationPage() {
                 </div>
               </div>
               <div className="text-right flex-shrink-0">
-                <div className="text-3xl font-bold" style={{ color: 'var(--cyan)' }}>{project.progress}%</div>
+                <div className="text-3xl font-bold" style={{ color: 'var(--accent)' }}>{project.progress}%</div>
                 <div className="text-xs mb-2" style={{ color: 'var(--text-3)' }}>Progress</div>
                 <ProgressBar value={project.progress} size="sm" className="w-24" />
               </div>
@@ -162,7 +162,7 @@ export default function ProjectPresentationPage() {
           {/* Editable info grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="card space-y-4">
-              <h3 className="font-semibold text-sm" style={{ color: 'var(--cyan)' }}>General Characteristics</h3>
+              <h3 className="font-semibold text-sm" style={{ color: 'var(--accent)' }}>General Characteristics</h3>
               {[
                 { label: 'Total Area (m²)', key: 'surface' as const, placeholder: 'e.g. 12,500 m²' },
                 { label: 'Number of Floors', key: 'floors' as const, placeholder: 'e.g. G+5 + B2' },
@@ -177,7 +177,7 @@ export default function ProjectPresentationPage() {
               ))}
             </div>
             <div className="card">
-              <h3 className="font-semibold text-sm mb-3" style={{ color: 'var(--cyan)' }}>General Description</h3>
+              <h3 className="font-semibold text-sm mb-3" style={{ color: 'var(--accent)' }}>General Description</h3>
               <textarea className="input" rows={8}
                 placeholder="General project description, objectives, context..."
                 value={data.generalDescription}
@@ -188,7 +188,7 @@ export default function ProjectPresentationPage() {
           {/* KPIs from existing data */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { label: 'Daily Reports', value: project._count?.dailyReports ?? 0, color: 'var(--cyan)'   },
+              { label: 'Daily Reports', value: project._count?.dailyReports ?? 0, color: 'var(--accent)'   },
               { label: 'Budget',        value: project.budget ? formatCurrency(project.budget, project.currency) : '—', color: 'var(--green)'  },
               { label: 'Open Risks',    value: project._count?.ncrs ?? 0,         color: 'var(--amber)'  },
               { label: 'Documents',            value: project._count?.documents ?? 0,    color: 'var(--violet)' },
@@ -275,9 +275,9 @@ export default function ProjectPresentationPage() {
                         onChange={e => { const arr = [...data.zones]; arr[i] = { ...arr[i], level: e.target.value }; update({ zones: arr }); }} /></td>
                       <td>
                         <div className="flex items-center gap-2">
-                          <input type="range" min={0} max={100} value={z.progress} className="flex-1" style={{ accentColor: 'var(--cyan)' }}
+                          <input type="range" min={0} max={100} value={z.progress} className="flex-1" style={{ accentColor: 'var(--accent)' }}
                             onChange={e => { const arr = [...data.zones]; arr[i] = { ...arr[i], progress: +e.target.value }; update({ zones: arr }); }} />
-                          <span className="text-xs font-bold w-8 text-right" style={{ color: 'var(--cyan)' }}>{z.progress}%</span>
+                          <span className="text-xs font-bold w-8 text-right" style={{ color: 'var(--accent)' }}>{z.progress}%</span>
                         </div>
                         <ProgressBar value={z.progress} size="sm" className="mt-1" />
                       </td>
@@ -293,7 +293,7 @@ export default function ProjectPresentationPage() {
           {data.zones.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="card-sm text-center" style={{ gridColumn: '1' }}>
-                <div className="text-2xl font-bold" style={{ color: 'var(--cyan)' }}>{data.zones.length}</div>
+                <div className="text-2xl font-bold" style={{ color: 'var(--accent)' }}>{data.zones.length}</div>
                 <div className="text-xs mt-1" style={{ color: 'var(--text-3)' }}>Defined Zones</div>
               </div>
               <div className="card-sm text-center">
@@ -316,9 +316,9 @@ export default function ProjectPresentationPage() {
       {/* ─── TAB: FACTURATION ─── */}
       {tab === 'billing' && (
         <div className="space-y-4">
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {[
-              { label: 'Total Billed', value: formatCurrency(totalBilledAmt, project.currency), color: 'var(--cyan)' },
+              { label: 'Total Billed', value: formatCurrency(totalBilledAmt, project.currency), color: 'var(--accent)' },
               { label: 'Total Paid',   value: formatCurrency(totalPaidAmt,   project.currency), color: 'var(--green)' },
               { label: 'Pending',      value: formatCurrency(totalBilledAmt - totalPaidAmt, project.currency), color: 'var(--amber)' },
             ].map(k => (
@@ -384,7 +384,7 @@ export default function ProjectPresentationPage() {
                 <div className="text-xs mb-1" style={{ color: 'var(--text-3)' }}>Weighted Overall Progress</div>
                 <ProgressBar value={weightedProg} size="lg" />
               </div>
-              <div className="text-2xl font-bold flex-shrink-0" style={{ color: 'var(--cyan)' }}>{weightedProg.toFixed(1)}%</div>
+              <div className="text-2xl font-bold flex-shrink-0" style={{ color: 'var(--accent)' }}>{weightedProg.toFixed(1)}%</div>
             </div>
           )}
           <div className="card">
@@ -421,7 +421,7 @@ export default function ProjectPresentationPage() {
                             <input type="number" min={0} max={100} className="input" style={{ padding: '4px 8px', fontSize: 12, width: 55 }} value={w.progress || ''} onChange={e => upd({ progress: +e.target.value })} />
                           </div>
                         </td>
-                        <td className="text-center font-bold text-xs" style={{ color: 'var(--cyan)' }}>{weightedVal}%</td>
+                        <td className="text-center font-bold text-xs" style={{ color: 'var(--accent)' }}>{weightedVal}%</td>
                         <td><input className="input" style={{ padding: '4px 8px', fontSize: 12, width: 80 }} value={w.sendRef} onChange={e => upd({ sendRef: e.target.value })} /></td>
                         <td><input type="date" className="input" style={{ padding: '4px 8px', fontSize: 12, width: 120 }} value={w.sendDate} onChange={e => upd({ sendDate: e.target.value })} /></td>
                         <td><input className="input" style={{ padding: '4px 8px', fontSize: 12, width: 80 }} value={w.approvalRef} onChange={e => upd({ approvalRef: e.target.value })} /></td>

@@ -1,10 +1,12 @@
 import { NavLink, useParams, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
+import { useUiStore } from '../../store/uiStore';
 import { cn } from '../../utils/helpers';
+import BrandMark from '../ui/BrandMark';
 import {
   LayoutDashboard, FolderOpen, FileText, Calendar, BarChart2,
   Users, Building2, ClipboardList, Shield, Files, TrendingUp,
-  ChevronRight, LogOut, Settings, Truck, HardHat, BookOpen, Map, ShieldCheck, FileStack, Gauge
+  LogOut, Truck, HardHat, BookOpen, Map, ShieldCheck, FileStack, Gauge, X,
 } from 'lucide-react';
 
 const mainNav = [
@@ -31,31 +33,49 @@ const projectNav = [
   { to: '/map', icon: Map, label: 'Carte du Site' },
 ];
 
+// The sidebar stays black in both themes: it is the architectural frame of the app.
 export default function Sidebar() {
   const { user, logout } = useAuthStore();
   const { projectId } = useParams();
   const location = useLocation();
   const isProjectRoute = !!projectId;
+  const { sidebarOpen, setSidebarOpen } = useUiStore();
 
   return (
-    <div className="w-64 bg-navy-900 flex flex-col h-screen fixed left-0 top-0 z-30">
+    <aside
+      className={cn(
+        'w-64 flex flex-col h-[100dvh] fixed left-0 top-0 z-40 transition-transform duration-300 ease-out lg:translate-x-0',
+        sidebarOpen ? 'translate-x-0 shadow-card-lg' : '-translate-x-full',
+      )}
+      style={{ background: 'var(--bg-sidebar)', borderRight: '1px solid rgba(201,152,44,0.16)' }}
+      aria-label="Main navigation"
+    >
       {/* Logo */}
-      <div className="px-6 py-5 border-b border-navy-800">
+      <div className="px-5 py-5" style={{ borderBottom: '1px solid rgba(245,241,232,0.07)' }}>
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg, var(--cyan), var(--violet))', boxShadow: '0 0 16px rgba(0,212,255,0.4)' }}>
-            <Building2 size={20} className="text-white" />
+          <BrandMark />
+          <div className="flex-1 min-w-0">
+            <p className="font-display text-[17px] leading-tight" style={{ color: '#F5F1E8' }}>
+              BuildTrack <span style={{ color: '#E0BC63' }}>Pro</span>
+            </p>
+            <p className="text-[10px] uppercase mt-0.5" style={{ color: 'rgba(245,241,232,0.45)', letterSpacing: '0.2em' }}>
+              Construction Manager
+            </p>
           </div>
-          <div>
-            <p className="font-bold text-white text-sm leading-tight">BuildTrack Pro</p>
-            <p className="text-gray-400 text-xs">Construction Manager</p>
-          </div>
+          <button
+            className="lg:hidden p-1.5 rounded-md"
+            style={{ color: 'rgba(245,241,232,0.6)' }}
+            onClick={() => setSidebarOpen(false)}
+            aria-label="Close navigation"
+          >
+            <X size={18} />
+          </button>
         </div>
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-1">
-        {/* Main Nav */}
-        <p className="px-3 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Main Menu</p>
+      <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-0.5">
+        <p className="sidebar-heading">Main Menu</p>
         {mainNav.map((item) => {
           const show = !item.roles || (user && item.roles.includes(user.role));
           if (!show) return null;
@@ -66,17 +86,16 @@ export default function Sidebar() {
               end={item.exact}
               className={({ isActive }) => cn('sidebar-link', isActive && 'sidebar-link-active')}
             >
-              <item.icon size={18} />
+              <item.icon size={17} strokeWidth={1.75} />
               <span>{item.label}</span>
             </NavLink>
           );
         })}
 
-        {/* Project Nav */}
         {isProjectRoute && (
           <>
-            <div className="my-3 border-t border-navy-800" />
-            <p className="px-3 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Project</p>
+            <div className="my-4 h-px" style={{ background: 'linear-gradient(90deg, rgba(201,152,44,0.35), transparent)' }} />
+            <p className="sidebar-heading">Project</p>
             {projectNav.map((item) => {
               const fullPath = `/projects/${projectId}${item.to}`;
               const isActive = item.to === ''
@@ -88,7 +107,7 @@ export default function Sidebar() {
                   to={fullPath}
                   className={cn('sidebar-link', isActive && 'sidebar-link-active')}
                 >
-                  <item.icon size={18} />
+                  <item.icon size={17} strokeWidth={1.75} />
                   <span>{item.label}</span>
                 </NavLink>
               );
@@ -98,22 +117,26 @@ export default function Sidebar() {
       </nav>
 
       {/* User Info */}
-      <div className="px-3 py-4 border-t border-navy-800">
-        <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-navy-800">
-          <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg, var(--cyan), var(--violet))' }}>
-            <span className="text-white text-xs font-bold">
+      <div className="px-3 py-4" style={{ borderTop: '1px solid rgba(245,241,232,0.07)' }}>
+        <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg"
+          style={{ background: 'rgba(245,241,232,0.04)', border: '1px solid rgba(245,241,232,0.06)' }}>
+          <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+            style={{ background: 'rgba(201,152,44,0.14)', border: '1px solid rgba(201,152,44,0.5)' }}>
+            <span className="text-xs font-semibold" style={{ color: '#E0BC63' }}>
               {user?.name?.charAt(0).toUpperCase()}
             </span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-white text-sm font-medium truncate">{user?.name}</p>
-            <p className="text-gray-400 text-xs truncate">{user?.role?.replace('_', ' ')}</p>
+            <p className="text-sm font-medium truncate" style={{ color: '#F5F1E8' }}>{user?.name}</p>
+            <p className="text-[11px] truncate uppercase" style={{ color: 'rgba(245,241,232,0.5)', letterSpacing: '0.08em' }}>
+              {user?.role?.replace('_', ' ')}
+            </p>
           </div>
-          <button onClick={logout} className="text-gray-400 hover:text-red-400 transition-colors" title="Logout">
+          <button onClick={logout} className="sidebar-logout" title="Logout" aria-label="Logout">
             <LogOut size={16} />
           </button>
         </div>
       </div>
-    </div>
+    </aside>
   );
 }

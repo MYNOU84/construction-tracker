@@ -2,9 +2,10 @@ export default function LoadingSpinner({ size = 'md', text }: { size?: 'sm' | 'm
   const s = { sm: 'w-4 h-4', md: 'w-8 h-8', lg: 'w-12 h-12' }[size];
   return (
     <div className="flex flex-col items-center justify-center gap-3 p-8">
-      <div className={`${s} border-3 border-gray-200 border-t-primary-600 rounded-full animate-spin`}
-        style={{ borderWidth: 3 }} />
-      {text && <p className="text-sm text-gray-500">{text}</p>}
+      <div className={`${s} rounded-full animate-spin`}
+        style={{ borderWidth: 2, borderStyle: 'solid', borderColor: 'var(--tint-3)', borderTopColor: 'var(--gold)' }}
+        role="status" aria-label={text || 'Loading'} />
+      {text && <p className="text-xs uppercase" style={{ color: 'var(--text-3)', letterSpacing: '0.16em' }}>{text}</p>}
     </div>
   );
 }

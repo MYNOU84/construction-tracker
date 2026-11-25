@@ -319,7 +319,7 @@ export default function SchedulePage() {
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-gray-900">Comparative Gantt — Planned vs Actual</h3>
             <div className="flex items-center gap-4 text-xs">
-              <span className="flex items-center gap-1.5"><span className="inline-block w-4 h-2.5 rounded" style={{background:'rgba(59,130,246,0.35)',border:'1px solid #3b82f6'}}></span>Planned</span>
+              <span className="flex items-center gap-1.5"><span className="inline-block w-4 h-2.5 rounded" style={{background:'var(--info-soft)',border:'1px solid var(--chart-3)'}}></span>Planned</span>
               <span className="flex items-center gap-1.5"><span className="inline-block w-4 h-2.5 rounded" style={{background:'#10b981'}}></span>Actual</span>
               <span className="flex items-center gap-1.5"><span className="inline-block w-0.5 h-4 bg-red-500"></span>Today</span>
               <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rotate-45" style={{background:'#f59e0b'}}></span>Milestone</span>
@@ -448,7 +448,7 @@ export default function SchedulePage() {
               <input type="date" className="input" {...regAct('plannedEnd', { required: true })} />
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="label">Progress (%)</label>
               <input type="number" className="input" min={0} max={100} {...regAct('actualProgress', { valueAsNumber: true })} />
@@ -780,7 +780,7 @@ function ImportModal({ projectId, onClose, onSuccess }: {
           </div>
 
           {/* Columns guide */}
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {[
               { col: 'Name', req: true, hint: 'Activity name' },
               { col: 'Discipline', req: false, hint: 'STRUCTURE, MECANIQUE…' },
@@ -1168,7 +1168,7 @@ function AnalyseTab({ activities, milestones }: { activities: Activity[]; milest
   return (
     <div className="space-y-6">
       {/* Summary KPIs */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
           { label: 'Planned Progress', value: `${overallPlanned}%`, color: 'text-blue-600', bg: 'bg-blue-50' },
           { label: 'Actual Progress', value: `${overallActual}%`, color: 'text-green-600', bg: 'bg-green-50' },
@@ -1191,20 +1191,20 @@ function AnalyseTab({ activities, milestones }: { activities: Activity[]; milest
           <AreaChart data={scurveData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
             <defs>
               <linearGradient id="planGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2} />
-                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.02} />
+                <stop offset="5%" stopColor="var(--chart-3)" stopOpacity={0.2} />
+                <stop offset="95%" stopColor="var(--chart-3)" stopOpacity={0.02} />
               </linearGradient>
               <linearGradient id="realGrad" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
                 <stop offset="95%" stopColor="#10b981" stopOpacity={0.02} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" />
             <XAxis dataKey="month" tick={{ fontSize: 11 }} />
             <YAxis domain={[0, 100]} tickFormatter={v => `${v}%`} tick={{ fontSize: 11 }} />
             <Tooltip formatter={(v: any) => `${v}%`} />
             <Legend />
-            <Area type="monotone" dataKey="planned" name="Planned" stroke="#3b82f6" strokeWidth={2}
+            <Area type="monotone" dataKey="planned" name="Planned" stroke="var(--chart-3)" strokeWidth={2}
               fill="url(#planGrad)" strokeDasharray="5 3" dot={false} />
             <Area type="monotone" dataKey="actual" name="Actual" stroke="#10b981" strokeWidth={2.5}
               fill="url(#realGrad)" dot={false} connectNulls={false} />

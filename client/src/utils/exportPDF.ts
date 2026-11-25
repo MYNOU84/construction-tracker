@@ -4,10 +4,12 @@ import { formatDate, parseJSON, translatePosition } from './helpers';
 import type { DailyReport, WeeklyReport, MonthlyReport, Project, LotProgress } from '../types';
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-const NAVY: [number, number, number] = [15, 28, 51];
-const PRIMARY: [number, number, number] = [30, 64, 175];
-const ORANGE: [number, number, number] = [234, 88, 12];
-const LIGHT: [number, number, number] = [245, 247, 250];
+// BuildTrack Pro identity: architectural black, gold and warm white.
+const NAVY: [number, number, number] = [10, 10, 11];      // ink band
+const PRIMARY: [number, number, number] = [23, 23, 26];   // charcoal banners and table heads
+const ORANGE: [number, number, number] = [201, 152, 44];  // gold accent (monogram, rules, bars)
+const LIGHT: [number, number, number] = [245, 241, 232];  // warm white
+const TRACK: [number, number, number] = [232, 226, 212];
 const RED: [number, number, number] = [220, 38, 38];
 const GREEN: [number, number, number] = [22, 163, 74];
 
@@ -18,9 +20,10 @@ function addHeader(doc: jsPDF, title: string, subtitle: string, project?: Projec
   doc.setFillColor(...ORANGE);
   doc.roundedRect(14, 7, 20, 20, 3, 3, 'F');
   doc.setFontSize(13);
-  doc.setTextColor(255, 255, 255);
+  doc.setTextColor(...NAVY);
   doc.setFont('helvetica', 'bold');
   doc.text('BT', 19.5, 21);
+  doc.setTextColor(245, 241, 232);
 
   doc.setFontSize(15);
   doc.text('BuildTrack Pro', 38, 16);
@@ -41,14 +44,16 @@ function addHeader(doc: jsPDF, title: string, subtitle: string, project?: Projec
   doc.text(title, 14, 49);
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(200, 210, 255);
+  doc.setTextColor(224, 188, 99);
   doc.text(subtitle, 14, 54);
+  doc.setFillColor(...ORANGE);
+  doc.rect(0, 55.4, 210, 0.6, 'F');
 
   if (project) {
     doc.setFillColor(...LIGHT);
     doc.rect(0, 56, 210, 14, 'F');
     doc.setFontSize(8);
-    doc.setTextColor(60, 80, 100);
+    doc.setTextColor(23, 23, 26);
     doc.setFont('helvetica', 'bold');
     doc.text(`Project: ${project.name} (${project.code})`, 14, 63);
     doc.setFont('helvetica', 'normal');
@@ -64,7 +69,7 @@ function addFooter(doc: jsPDF, pageNum: number, totalPages: number) {
   doc.setFillColor(...NAVY);
   doc.rect(0, h - 10, 210, 10, 'F');
   doc.setFontSize(7);
-  doc.setTextColor(180, 190, 210);
+  doc.setTextColor(200, 192, 176);
   doc.setFont('helvetica', 'normal');
   doc.text('CONFIDENTIAL — BuildTrack Pro Construction Management System', 14, h - 3);
   doc.text(`Page ${pageNum} / ${totalPages}`, 196, h - 3, { align: 'right' });
@@ -73,6 +78,7 @@ function addFooter(doc: jsPDF, pageNum: number, totalPages: number) {
 function sectionTitle(doc: jsPDF, y: number, text: string, color: [number,number,number] = PRIMARY): number {
   doc.setFillColor(...color);
   doc.rect(14, y, 182, 7, 'F');
+  if (color === PRIMARY) { doc.setFillColor(...ORANGE); doc.rect(14, y, 1.2, 7, 'F'); }
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(255, 255, 255);
@@ -121,8 +127,8 @@ export function exportDailyReportPDF(report: DailyReport, project: Project) {
     theme: 'grid',
     styles: { fontSize: 8, cellPadding: 2.5 },
     columnStyles: {
-      0: { fontStyle: 'bold', fillColor: LIGHT, textColor: [40, 60, 80] },
-      2: { fontStyle: 'bold', fillColor: LIGHT, textColor: [40, 60, 80] },
+      0: { fontStyle: 'bold', fillColor: LIGHT, textColor: [23, 23, 26] },
+      2: { fontStyle: 'bold', fillColor: LIGHT, textColor: [23, 23, 26] },
     },
     margin: { left: 14, right: 14 },
   });
@@ -161,8 +167,8 @@ export function exportDailyReportPDF(report: DailyReport, project: Project) {
           String(m.np || m.count || 0),
           String(m.hours || '—'),
         ]),
-        ['', { content: 'TOTAL DIRECT', colSpan: 3, styles: { fontStyle: 'bold', fillColor: [230, 240, 255] } }, '', { content: String(totalDirect), styles: { fontStyle: 'bold', fillColor: [230, 240, 255] } }, ''],
-        ['', { content: 'TOTAL INDIRECT', colSpan: 3, styles: { fontStyle: 'bold', fillColor: [255, 245, 220] } }, '', { content: String(totalIndirect), styles: { fontStyle: 'bold', fillColor: [255, 245, 220] } }, ''],
+        ['', { content: 'TOTAL DIRECT', colSpan: 3, styles: { fontStyle: 'bold', fillColor: [243, 233, 210] } }, '', { content: String(totalDirect), styles: { fontStyle: 'bold', fillColor: [243, 233, 210] } }, ''],
+        ['', { content: 'TOTAL INDIRECT', colSpan: 3, styles: { fontStyle: 'bold', fillColor: [245, 241, 232] } }, '', { content: String(totalIndirect), styles: { fontStyle: 'bold', fillColor: [245, 241, 232] } }, ''],
         ['', { content: 'GRAND TOTAL', colSpan: 3, styles: { fontStyle: 'bold', fillColor: PRIMARY, textColor: [255,255,255] } }, '', { content: String(totalDirect + totalIndirect), styles: { fontStyle: 'bold', fillColor: PRIMARY, textColor: [255,255,255] } }, ''],
       ],
       theme: 'striped',
@@ -521,13 +527,24 @@ export function exportMonthlyReportPDF(report: MonthlyReport, project: Project) 
     body: disciplines.map(([name, val]) => [
       String(name),
       `${val}%`,
-      { content: '█'.repeat(Math.round(Number(val) / 5)) + '░'.repeat(20 - Math.round(Number(val) / 5)), styles: { font: 'courier', fontSize: 7 } },
+      '', // drawn as a graphical bar in didDrawCell
     ]),
     theme: 'striped',
     headStyles: { fillColor: PRIMARY, textColor: 255, fontSize: 8 },
     styles: { fontSize: 8 },
-    columnStyles: { 1: { halign: 'center', fontStyle: 'bold' } },
+    columnStyles: { 1: { halign: 'center', fontStyle: 'bold' }, 2: { cellWidth: 80 } },
     margin: { left: 14, right: 14 },
+    didDrawCell: (d) => {
+      if (d.section !== 'body' || d.column.index !== 2) return;
+      const pct = Math.max(0, Math.min(100, Number(disciplines[d.row.index]?.[1]) || 0));
+      const h = 3, x = d.cell.x + 3, w = d.cell.width - 6, by = d.cell.y + d.cell.height / 2 - h / 2;
+      doc.setFillColor(...TRACK);
+      doc.rect(x, by, w, h, 'F');
+      if (pct > 0) {
+        doc.setFillColor(...ORANGE);
+        doc.rect(x, by, (w * pct) / 100, h, 'F');
+      }
+    },
   });
   y = (doc as any).lastAutoTable.finalY + 6;
 

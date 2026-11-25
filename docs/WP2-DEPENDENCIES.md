@@ -63,6 +63,10 @@ character (`%ˆ` / `%‘`). The output is identical on jsPDF 2.5.2 and 4.2.1. Th
 current output so any change is visible. Fixing it changes the design and belongs to the
 WP3/WP4 redesign.
 
+**Resolved in WP3/WP4:** the bars are now drawn as filled rectangles (warm track plus gold
+fill) in `didDrawCell`. The export test checks each fill ratio against the percentage and
+asserts that no block glyphs remain.
+
 ## Verification
 
 | Check | Result |

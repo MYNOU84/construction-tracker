@@ -34,7 +34,7 @@ export default function AnalyticsPage() {
     queryFn: () => analyticsApi.dashboard().then(r => r.data),
   });
 
-  const COLORS = ['#3b82f6', '#f97316', '#8b5cf6', '#10b981', '#eab308', '#ef4444'];
+  const COLORS = ['var(--chart-3)', '#f97316', '#8b5cf6', '#10b981', '#eab308', '#ef4444'];
 
   return (
     <div className="space-y-6 fade-in">
@@ -211,15 +211,15 @@ export default function AnalyticsPage() {
               <AreaChart data={analytics.manpowerTrend}>
                 <defs>
                   <linearGradient id="mpG" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                    <stop offset="5%" stopColor="var(--chart-3)" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="var(--chart-3)" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" />
                 <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={d => formatDate(d, 'dd MMM')} />
                 <YAxis tick={{ fontSize: 11 }} />
                 <Tooltip labelFormatter={d => formatDate(d, 'dd MMM yyyy')} formatter={v => [v, 'Workers']} />
-                <Area type="monotone" dataKey="manpower" stroke="#3b82f6" strokeWidth={2} fill="url(#mpG)" />
+                <Area type="monotone" dataKey="manpower" stroke="var(--chart-3)" strokeWidth={2} fill="url(#mpG)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -267,7 +267,7 @@ export default function AnalyticsPage() {
                           { name: 'Delayed', value: analytics.activityStats.delayed },
                         ].filter(d => d.value > 0)}
                         cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={3} dataKey="value">
-                        {['#94a3b8', '#3b82f6', '#22c55e', '#ef4444'].map((c, i) => <Cell key={i} fill={c} />)}
+                        {['var(--text-3)', 'var(--chart-3)', '#22c55e', '#ef4444'].map((c, i) => <Cell key={i} fill={c} />)}
                       </Pie>
                       <Tooltip />
                       <Legend iconType="circle" />
@@ -354,14 +354,14 @@ export default function AnalyticsPage() {
               <h3 className="font-semibold text-gray-900 mb-4">Weather Distribution</h3>
               <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={analytics.weatherBreakdown}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" />
                   <XAxis dataKey="weather" tick={{ fontSize: 10 }} />
                   <YAxis tick={{ fontSize: 11 }} />
                   <Tooltip />
-                  <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Days" />
+                  <Bar dataKey="count" fill="var(--chart-3)" radius={[4, 4, 0, 0]} name="Days" />
                 </BarChart>
               </ResponsiveContainer>
-              <div className="grid grid-cols-3 gap-2 mt-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-3">
                 <div className="card-sm text-center !p-2">
                   <div className="text-lg font-bold text-blue-600">{analytics.totalWorkingDays}</div>
                   <div className="text-xs text-gray-500">Working Days</div>
