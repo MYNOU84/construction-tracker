@@ -1,9 +1,7 @@
-import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import prisma from './lib/prisma';
 
-const prisma = new PrismaClient();
-
-async function main() {
+export async function seedDatabase() {
   console.log('🌱 Seeding database...');
 
   // Users
@@ -87,6 +85,14 @@ async function main() {
       },
     },
   });
+
+  // Everything below uses create(), so only add it the first time project 1 is seeded.
+  // Users and projects above are upserts with `update: {}` and never overwrite existing rows.
+  const existingActivities = await prisma.activity.count({ where: { projectId: project1.id } });
+  if (existingActivities > 0) {
+    console.log('ℹ️  Demo project data already present — skipping milestones, activities, reports, risks and NCRs.');
+    return;
+  }
 
   // Milestones for project 1
   const milestones = [
@@ -223,4 +229,6 @@ async function main() {
   console.log('   Consult:  consultant@buildtrack.com / cons1234\n');
 }
 
-main().catch(console.error).finally(() => prisma.$disconnect());
+if (require.main === module) {
+  seedDatabase().catch(console.error).finally(() => prisma.$disconnect());
+}
