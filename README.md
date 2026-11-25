@@ -34,9 +34,32 @@ npm run dev
 **App:** http://localhost:5173  
 **API:** http://localhost:5000
 
+### Upgrading an existing local database
+
+`START.bat` and `npm start` check the schema of an existing `server/prisma/dev.db`
+without changing it. If the database predates a schema change they stop and say so.
+To upgrade (a backup is written to `server/prisma/backups/` first, and no data is dropped):
+
+```bash
+cd server
+npm run db:check     # read-only: reports whether an upgrade is needed
+npm run db:upgrade   # backup + upgrade
+```
+
+### Environment
+
+Copy `server/.env.example` to `server/.env` and set a long random `JWT_SECRET`
+(the file explains how to generate one). Every environment needs its **own** secret:
+a deployed instance must use a separate production secret set in the hosting
+provider's environment variables, never the local one. See [SECURITY.md](SECURITY.md).
+
 ---
 
 ## Demo Accounts
+
+> **Local development only.** These accounts are created by the local seed script.
+> They must never exist in a hosted database; the public demo uses a separate
+> read-only demonstration database (`DEMO_MODE=true`) with password sign-in disabled.
 
 | Role | Email | Password |
 |------|-------|----------|
@@ -112,6 +135,24 @@ npm run dev
 - 6 roles: Admin, Project Manager, Site Engineer, Consultant, Contractor, Client Viewer
 - User activation/deactivation
 - Per-project team assignment
+
+---
+
+## Security
+
+Sessions use an httpOnly cookie, state-changing requests require a CSRF header, every
+project route checks membership, uploads are allow-listed, and demo mode is read-only on
+the server. Details, configuration and known limitations are in [SECURITY.md](SECURITY.md).
+
+Run the security regression suite (it uses its own temporary database and never touches
+`dev.db`):
+
+```bash
+cd server
+npm run test:security
+```
+
+Latest results: [server/tests/security/RESULTS.md](server/tests/security/RESULTS.md).
 
 ---
 

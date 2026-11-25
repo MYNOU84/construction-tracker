@@ -122,7 +122,9 @@ export const demoLogin = async (req: Request, res: Response): Promise<void> => {
       res.status(400).json({ message: 'Unknown demo account' });
       return;
     }
-    const user = await prisma.user.findUnique({ where: { email: requested }, select: { id: true, isActive: true } });
+    const user = await prisma.user.findUnique({ where: { email: requested }, select: { id: true, isActive: true, role: true } });
+    // Administrator accounts are never offered by one-click demo sign-in, even if allow-listed by mistake.
+    if (user?.role === 'ADMIN') { res.status(400).json({ message: 'Unknown demo account' }); return; }
     if (!user || !user.isActive) { res.status(503).json({ message: 'Demo account is not available' }); return; }
     const publicUser = await issueSession(res, user.id);
     res.json({ user: publicUser });
@@ -136,7 +138,7 @@ export const demoAccounts = async (_req: Request, res: Response): Promise<void> 
   if (!security.demoMode) { res.json([]); return; }
   try {
     const users = await prisma.user.findMany({
-      where: { email: { in: security.demoUserEmails }, isActive: true },
+      where: { email: { in: security.demoUserEmails }, isActive: true, role: { not: 'ADMIN' } },
       select: { email: true, name: true, role: true },
     });
     const order = security.demoUserEmails;

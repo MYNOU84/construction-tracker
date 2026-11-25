@@ -16,6 +16,7 @@ server/dist/
 # Database
 server/prisma/*.db
 server/prisma/*.db-journal
+server/prisma/backups/
 
 # Uploads (user-uploaded files)
 server/uploads/*

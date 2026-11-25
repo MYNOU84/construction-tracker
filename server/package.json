@@ -8,7 +8,10 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:generate": "prisma generate",
     "prisma:studio": "prisma studio",
-    "seed": "tsx src/seed.ts"
+    "seed": "tsx src/seed.ts",
+    "db:check": "node scripts/db-sync.js",
+    "db:upgrade": "node scripts/db-sync.js --apply",
+    "test:security": "tsc && node tests/security/run.mjs"
   },
   "dependencies": {
     "@prisma/client": "^5.14.0",

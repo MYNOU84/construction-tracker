@@ -29,11 +29,23 @@ call npx prisma generate
 
 if not exist "prisma\dev.db" (
     echo  First run - creating database...
-    call npx prisma db push --accept-data-loss
+    call node scripts\db-sync.js
     call npx tsx src/seed.ts
     echo  Database ready.
 ) else (
-    echo  Database found - skipping setup.
+    echo  Database found - checking schema ^(read-only^)...
+    call node scripts\db-sync.js
+    if errorlevel 1 (
+        echo.
+        echo  The existing database needs a schema upgrade before sign-in will work.
+        echo  Your data has NOT been changed. To upgrade with an automatic backup, run:
+        echo      cd server
+        echo      npm run db:upgrade
+        echo  then start BuildTrack Pro again.
+        cd ..
+        pause
+        exit /b 1
+    )
 )
 
 cd ..

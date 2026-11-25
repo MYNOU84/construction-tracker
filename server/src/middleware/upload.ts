@@ -3,8 +3,11 @@ import path from 'path';
 import fs from 'fs';
 import { randomUUID } from 'crypto';
 
-/** server/uploads — same folder whether running from src (tsx) or dist (node). */
-export const UPLOAD_ROOT = path.join(__dirname, '..', '..', 'uploads');
+/**
+ * Upload folder. Defaults to server/uploads (same folder from src or dist);
+ * UPLOAD_DIR overrides it, e.g. so the security tests write to a temp folder.
+ */
+export const UPLOAD_ROOT = path.resolve(process.env.UPLOAD_DIR || path.join(__dirname, '..', '..', 'uploads'));
 
 /** Extension → Content-Type used when serving. Only these extensions are accepted. */
 export const DOCUMENT_TYPES: Record<string, string> = {
