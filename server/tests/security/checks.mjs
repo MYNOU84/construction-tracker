@@ -179,6 +179,15 @@ export async function devChecks(ctx) {
   check('PM of project A can add a member', add.status === 200, `status=${add.status}`);
   const rem = await s.pm.req('DELETE', `/api/projects/${ids.projectA}/members/${ids.users.revoke}`);
   check('PM of project A can remove a member', rem.status === 200, `status=${rem.status}`);
+  for (const r of ['PROJECT_MANAGER', 'SITE_ENGINEER', 'CONSULTANT', 'CONTRACTOR', 'CLIENT_VIEWER']) {
+    const email = `owner-made-${r.toLowerCase()}@security-test.invalid`;
+    const cu = await s.admin.req('POST', '/api/users', { name: 'Owner Made ' + r, email, password: 'password123', role: r });
+    check(`owner creates a ${r} account → 201`, cu.status === 201, `status=${cu.status} ${JSON.stringify(cu.json)}`);
+    if (cu.status === 201) {
+      const am = await s.admin.req('POST', `/api/projects/${ids.projectA}/members`, { userId: cu.json.id, role: r });
+      check(`owner adds the new ${r} account to a project → 200`, am.status === 200, `status=${am.status} ${JSON.stringify(am.json)}`);
+    }
+  }
   check('project A still exists after the role checks', !!(await db.project.findUnique({ where: { id: ids.projectA } })));
 
   group('uploads');

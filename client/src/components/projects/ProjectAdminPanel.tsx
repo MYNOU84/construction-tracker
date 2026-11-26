@@ -219,12 +219,17 @@ function MembersModal({ project, onClose, onChanged }: { project: Project; onClo
           <button type="button" className="btn-secondary btn-sm" onClick={() => setCreating(true)}><UserPlus size={13} /> Create new account &amp; add</button>
         ) : (
           <div className="border border-gray-100 rounded-lg p-3 space-y-3">
-            <p className="text-sm font-medium">New account — added to this project as the role selected above</p>
+            <p className="text-sm font-medium">New account — created and added to this project with the role below</p>
             <div className="grid sm:grid-cols-2 gap-3">
               <div><label className="label">Full name</label><input className="input" value={nu.name} onChange={e => setNu({ ...nu, name: e.target.value })} /></div>
               <div><label className="label">Email</label><input className="input" type="email" value={nu.email} onChange={e => setNu({ ...nu, email: e.target.value })} /></div>
               <div><label className="label">Initial password (min. 8)</label><input className="input" type="password" autoComplete="new-password" value={nu.password} onChange={e => setNu({ ...nu, password: e.target.value })} /></div>
               <div><label className="label">Company (optional)</label><input className="input" value={nu.company} onChange={e => setNu({ ...nu, company: e.target.value })} /></div>
+              <div><label className="label">Role for this new account</label>
+                <select className="input" value={role} onChange={e => setRole(e.target.value)}>
+                  {MEMBER_ROLES.map(r => <option key={r} value={r}>{r.replace(/_/g, ' ')}</option>)}
+                </select>
+              </div>
             </div>
             <div className="flex gap-2">
               <button type="button" className="btn-primary btn-sm" disabled={createAndAdd.isPending || !nu.name.trim() || !nu.email.trim() || nu.password.length < 8} onClick={() => createAndAdd.mutate()}>
