@@ -18,7 +18,6 @@
  */
 const { execSync } = require('child_process');
 const path = require('path');
-const readline = require('readline');
 const fs = require('fs');
 
 const DEMO_EMAILS = ['pm@buildtrack.com', 'engineer@buildtrack.com', 'consultant@buildtrack.com',
@@ -40,10 +39,26 @@ const listed = (process.env.DEMO_USER_EMAILS || '').split(',').map(e => e.trim()
 if (DEMO_EMAILS.includes(email) || listed.includes(email)) fail('A public demo account cannot be the owner. Use your own e-mail address.');
 
 function askHidden(question) {
+  // Raw-mode read: nothing typed or pasted is ever echoed to the screen.
   return new Promise((resolve) => {
-    const rl = readline.createInterface({ input: process.stdin, output: process.stdout, terminal: true });
-    rl._writeToOutput = (s) => { if (s.includes(question)) process.stdout.write(s); };
-    rl.question(question, (answer) => { rl.close(); process.stdout.write('\n'); resolve(answer); });
+    const { stdin, stdout } = process;
+    stdout.write(question);
+    stdin.setRawMode(true);
+    stdin.resume();
+    stdin.setEncoding('utf8');
+    let value = '';
+    const onData = (chunk) => {
+      for (const ch of chunk) {
+        if (ch === '\r' || ch === '\n') {
+          stdin.setRawMode(false); stdin.pause(); stdin.off('data', onData); stdout.write('\n');
+          resolve(value); return;
+        }
+        if (ch === '\u0003') { stdin.setRawMode(false); stdout.write('\n'); process.exit(130); }
+        if (ch === '\u007f' || ch === '\b') value = value.slice(0, -1);
+        else value += ch;
+      }
+    };
+    stdin.on('data', onData);
   });
 }
 
