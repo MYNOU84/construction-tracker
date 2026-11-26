@@ -13,11 +13,13 @@
  * sets the new password, clears any lockout and signs out its existing sessions (tokenVersion + 1).
  * Public demo accounts cannot become owners. The local development database (dev.db) is refused.
  *
- * For PostgreSQL the Prisma provider is switched and restored exactly as in db:prod-init.
+ * For PostgreSQL a separate Prisma client is generated into a throw-away folder (server/.owner-client-*), so the
+ * installed client, prisma/schema.prisma and dev.db are never touched (this avoids the Windows EPERM file lock).
  */
 const { execSync } = require('child_process');
 const path = require('path');
 const readline = require('readline');
+const fs = require('fs');
 
 const DEMO_EMAILS = ['pm@buildtrack.com', 'engineer@buildtrack.com', 'consultant@buildtrack.com',
   'contractor@buildtrack.com', 'client@buildtrack.com', 'admin@buildtrack.com'];
@@ -55,21 +57,32 @@ async function readPassword() {
 }
 
 const cwd = path.join(__dirname, '..');
-const run = (cmd, env) => execSync(cmd, { cwd, stdio: 'pipe', env: { ...process.env, ...env } });
+
+/** A Prisma client for the given URL. PostgreSQL gets its own generated copy; SQLite uses the installed client. */
+function makeClient() {
+  if (!isPg) { const { PrismaClient } = require('@prisma/client'); return { prisma: new PrismaClient({ datasources: { db: { url } } }), cleanup() {} }; }
+  const dir = path.join(cwd, '.owner-client-' + process.pid);
+  fs.mkdirSync(dir, { recursive: true });
+  const schema = fs.readFileSync(path.join(cwd, 'prisma', 'schema.prisma'), 'utf8')
+    .replace(/provider\s*=\s*"sqlite"/, 'provider = "postgresql"')
+    .replace('provider = "prisma-client-js"', `provider = "prisma-client-js"\n  output   = "${path.join(dir, 'client').split(path.sep).join('/')}"`);
+  const schemaFile = path.join(dir, 'schema.prisma');
+  fs.writeFileSync(schemaFile, schema);
+  execSync('npx prisma generate --schema "' + schemaFile + '"', { cwd, stdio: 'pipe', env: { ...process.env, DATABASE_URL: url } });
+  const { PrismaClient } = require(path.join(dir, 'client'));
+  return { prisma: new PrismaClient({ datasources: { db: { url } } }), cleanup() { try { fs.rmSync(dir, { recursive: true, force: true }); } catch { /* a locked engine file is removed next run */ } } };
+}
 
 (async () => {
   const password = await readPassword();
   if (typeof password !== 'string' || password.length < 12) fail('The password must be at least 12 characters. Nothing was changed.');
 
   let failed = false;
+  let handle;
   try {
-    if (isPg) {
-      run('node scripts/set-provider.js', { DATABASE_URL: url });
-      run('npx prisma generate', { DATABASE_URL: url });
-    }
-    const { PrismaClient } = require('@prisma/client');
+    handle = makeClient();
+    const { prisma } = handle;
     const bcrypt = require('bcryptjs');
-    const prisma = new PrismaClient({ datasources: { db: { url } } });
     try {
       const hash = await bcrypt.hash(password, 12);
       const existing = await prisma.user.findUnique({ where: { email }, select: { id: true } });
@@ -83,17 +96,18 @@ const run = (cmd, env) => execSync(cmd, { cwd, stdio: 'pipe', env: { ...process.
         await prisma.user.create({ data: { name, email, role: 'ADMIN', password: hash } });
         console.log('Owner account created with role ADMIN.');
       }
+      const check = await prisma.user.findUnique({ where: { email }, select: { role: true, isActive: true, password: true } });
+      const ok = check && check.role === 'ADMIN' && check.isActive && await bcrypt.compare(password, check.password);
+      console.log(ok ? 'Verified in the database: ADMIN, active, password matches.' : 'WARNING: verification failed.');
+      if (!ok) failed = true;
     } finally {
       await prisma.$disconnect();
     }
   } catch (e) {
     failed = true;
-    console.error('Owner initialisation failed:', e && e.code ? e.code : 'see the message above');
+    console.error('Owner initialisation failed:', e && e.code ? e.code : (e && e.message ? String(e.message).split('\n').pop().slice(0, 200) : 'unknown'));
   } finally {
-    if (isPg) {
-      run('node scripts/set-provider.js', { DATABASE_URL: 'file:./dev.db' }); // picks the sqlite provider; dev.db is not opened
-      run('npx prisma generate', { DATABASE_URL: 'file:./dev.db' });
-    }
+    if (handle) handle.cleanup();
   }
   process.exit(failed ? 1 : 0);
 })();
