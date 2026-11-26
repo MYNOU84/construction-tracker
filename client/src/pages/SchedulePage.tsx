@@ -15,6 +15,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine
 } from 'recharts';
 import type { Activity, Milestone } from '../types';
+import { useProjectPermissions } from '../hooks/useProjectPermissions';
 import TableExportButtons from '../components/reports/TableExportButtons';
 
 type Tab = 'activities' | 'milestones' | 'gantt' | 'analyse' | 'documents';
@@ -23,6 +24,7 @@ const VALID_TABS: Tab[] = ['activities', 'milestones', 'gantt', 'analyse', 'docu
 
 export default function SchedulePage() {
   const { projectId } = useParams<{ projectId: string }>();
+  const { can } = useProjectPermissions(projectId);
   const [searchParams] = useSearchParams();
   const qc = useQueryClient();
 
@@ -76,6 +78,14 @@ export default function SchedulePage() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['activities', projectId] }); setShowActivityModal(false); resetAct(); setEditingActivity(null); },
   });
 
+  const deleteActivity = useMutation({
+    mutationFn: (id: string) => activitiesApi.delete(projectId!, id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['activities', projectId] }),
+  });
+  const deleteMilestone = useMutation({
+    mutationFn: (id: string) => milestonesApi.delete(projectId!, id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['milestones', projectId] }),
+  });
   const createMilestone = useMutation({
     mutationFn: (data: any) => editingMilestone
       ? milestonesApi.update(projectId!, editingMilestone.id, data)
@@ -285,9 +295,16 @@ export default function SchedulePage() {
                           </td>
                           <td><StatusBadge status={a.status} /></td>
                           <td>
-                            <button onClick={() => openEditActivity(a)} className="btn-secondary btn-sm">
-                              <Edit2 size={12} />
-                            </button>
+                            <div className="flex gap-1">
+                              <button onClick={() => openEditActivity(a)} className="btn-secondary btn-sm" title="Edit">
+                                <Edit2 size={12} />
+                              </button>
+                              {can('schedule', 'delete') && (
+                                <button onClick={() => { if (window.confirm('Delete this activity?')) deleteActivity.mutate(a.id); }} className="btn-danger btn-sm" title="Delete">
+                                  <Trash2 size={12} />
+                                </button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -327,9 +344,14 @@ export default function SchedulePage() {
                       </div>
                     </div>
                     <StatusBadge status={m.status} />
-                    <button onClick={() => openEditMilestone(m)} className="btn-secondary btn-sm">
+                    <button onClick={() => openEditMilestone(m)} className="btn-secondary btn-sm" title="Edit">
                       <Edit2 size={12} />
                     </button>
+                    {can('schedule', 'delete') && (
+                      <button onClick={() => { if (window.confirm('Delete this milestone?')) deleteMilestone.mutate(m.id); }} className="btn-danger btn-sm" title="Delete">
+                        <Trash2 size={12} />
+                      </button>
+                    )}
                   </div>
                 );
               })}

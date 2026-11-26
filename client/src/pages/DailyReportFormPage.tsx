@@ -8,6 +8,7 @@ import { PageLoader } from '../components/ui/LoadingSpinner';
 import { useProjectPermissions } from '../hooks/useProjectPermissions';
 import { useAuthStore } from '../store/authStore';
 import PhotoAttachments from '../components/ui/PhotoAttachments';
+import type { Comment } from '../types';
 import { Plus, Trash2, Save, Send, CheckCircle, XCircle, ChevronDown, ChevronUp, Sun, Cloud, CloudRain, Wind } from 'lucide-react';
 
 type Section = 'info' | 'manpower' | 'equipment' | 'materials' | 'tasks' | 'delays' | 'hse' | 'actions';
@@ -757,6 +758,11 @@ export default function DailyReportFormPage() {
           </div>
         )}
 
+        {isEdit && (existing?.comments?.length || can('daily', 'review')) && (
+          <ReportComments projectId={projectId!} reportId={reportId!} comments={existing?.comments} canComment={can('daily', 'review')}
+            onChanged={() => qc.invalidateQueries({ queryKey: ['daily-report', projectId, reportId] })} />
+        )}
+
         {/* Bottom Actions */}
         <div className="flex justify-end gap-3 pb-6">
           <button type="button" onClick={() => navigate(`/projects/${projectId}/reports/daily`)} className="btn-secondary">
@@ -774,6 +780,39 @@ export default function DailyReportFormPage() {
           )}
         </div>
       </form>
+    </div>
+  );
+}
+
+function ReportComments({ projectId, reportId, comments = [], canComment, onChanged }: {
+  projectId: string; reportId: string; comments?: Comment[]; canComment: boolean; onChanged: () => void;
+}) {
+  const [text, setText] = useState('');
+  const [err, setErr] = useState('');
+  const add = useMutation({
+    mutationFn: () => dailyReportsApi.addComment(projectId, reportId, { content: text.trim() }),
+    onSuccess: () => { setText(''); setErr(''); onChanged(); },
+    onError: (e: any) => setErr(e?.response?.data?.message || 'Could not add the comment'),
+  });
+  return (
+    <div className="card">
+      <h3 className="font-semibold text-gray-900 mb-3">Review comments</h3>
+      <div className="space-y-2 mb-3">
+        {comments.length === 0 && <p className="text-xs text-gray-400">No comments yet.</p>}
+        {comments.map(c => (
+          <div key={c.id} className="text-sm border rounded-lg px-3 py-2">
+            <p className="text-xs text-gray-400">{c.user?.name} · {new Date(c.createdAt).toLocaleString()}</p>
+            <p className="whitespace-pre-wrap">{c.content}</p>
+          </div>
+        ))}
+      </div>
+      {canComment && (
+        <div className="flex gap-2 items-start">
+          <textarea className="input flex-1" rows={2} placeholder="Add a review comment…" value={text} onChange={e => setText(e.target.value)} />
+          <button type="button" className="btn-primary" disabled={!text.trim() || add.isPending} onClick={() => add.mutate()}>Comment</button>
+        </div>
+      )}
+      {err && <p className="text-xs text-red-600 mt-1">{err}</p>}
     </div>
   );
 }
