@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Pencil, Archive, ArchiveRestore, UserPlus, Trash2, FileSpreadsheet, FileJson, Settings2 } from 'lucide-react';
-import { projectsApi } from '../../api/endpoints';
+import { projectsApi, usersApi } from '../../api/endpoints';
 import { useAuthStore } from '../../store/authStore';
 import { getStatusLabel } from '../../utils/helpers';
 import { exportProjectWorkbook, exportProjectJSON } from '../../utils/exportTable';
@@ -158,6 +158,9 @@ function MembersModal({ project, onClose, onChanged }: { project: Project; onClo
   const [userId, setUserId] = useState('');
   const [role, setRole] = useState('SITE_ENGINEER');
   const [error, setError] = useState('');
+  const isOwner = useAuthStore(st => st.user?.role) === 'ADMIN';
+  const [creating, setCreating] = useState(false);
+  const [nu, setNu] = useState({ name: '', email: '', password: '', company: '' });
   const { data: candidates = [] } = useQuery({
     queryKey: ['member-candidates', project.id],
     queryFn: () => projectsApi.candidates(project.id).then(r => r.data),
@@ -173,6 +176,14 @@ function MembersModal({ project, onClose, onChanged }: { project: Project; onClo
   const remove = useMutation({
     mutationFn: (id: string) => projectsApi.removeMember(project.id, id),
     onSuccess: () => { setError(''); onChanged(); },
+    onError: (e) => setError(errMsg(e)),
+  });
+  const createAndAdd = useMutation({
+    mutationFn: async () => {
+      const u = await usersApi.create({ name: nu.name.trim(), email: nu.email.trim(), password: nu.password, role, company: nu.company.trim() || undefined });
+      await projectsApi.addMember(project.id, { userId: u.data.id, role });
+    },
+    onSuccess: () => { setError(''); setCreating(false); setNu({ name: '', email: '', password: '', company: '' }); onChanged(); },
     onError: (e) => setError(errMsg(e)),
   });
   const changeRole = useMutation({
@@ -203,7 +214,26 @@ function MembersModal({ project, onClose, onChanged }: { project: Project; onClo
             <UserPlus size={15} /> Add member
           </button>
         </div>
-        {available.length === 0 && <p className="text-xs text-gray-400">Every active account is already a member. Create accounts on the Users page.</p>}
+        {available.length === 0 && <p className="text-xs text-gray-400">Every active account is already a member. Create a new account below.</p>}
+        {!isOwner ? null : !creating ? (
+          <button type="button" className="btn-secondary btn-sm" onClick={() => setCreating(true)}><UserPlus size={13} /> Create new account &amp; add</button>
+        ) : (
+          <div className="border border-gray-100 rounded-lg p-3 space-y-3">
+            <p className="text-sm font-medium">New account — added to this project as the role selected above</p>
+            <div className="grid sm:grid-cols-2 gap-3">
+              <div><label className="label">Full name</label><input className="input" value={nu.name} onChange={e => setNu({ ...nu, name: e.target.value })} /></div>
+              <div><label className="label">Email</label><input className="input" type="email" value={nu.email} onChange={e => setNu({ ...nu, email: e.target.value })} /></div>
+              <div><label className="label">Initial password (min. 8)</label><input className="input" type="password" autoComplete="new-password" value={nu.password} onChange={e => setNu({ ...nu, password: e.target.value })} /></div>
+              <div><label className="label">Company (optional)</label><input className="input" value={nu.company} onChange={e => setNu({ ...nu, company: e.target.value })} /></div>
+            </div>
+            <div className="flex gap-2">
+              <button type="button" className="btn-primary btn-sm" disabled={createAndAdd.isPending || !nu.name.trim() || !nu.email.trim() || nu.password.length < 8} onClick={() => createAndAdd.mutate()}>
+                {createAndAdd.isPending ? 'Creating…' : 'Create & add'}
+              </button>
+              <button type="button" className="btn-secondary btn-sm" onClick={() => setCreating(false)}>Cancel</button>
+            </div>
+          </div>
+        )}
         {error && <p className="text-sm text-red-600">{error}</p>}
         <div className="divide-y divide-gray-100 border border-gray-100 rounded-lg">
           {(project.members ?? []).map(m => (
