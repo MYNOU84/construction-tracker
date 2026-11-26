@@ -179,7 +179,9 @@ export const uploadPhoto = async (req: AuthRequest, res: Response): Promise<void
       ? await prisma.dailyReport.findUnique({ where: { id: dailyReportId }, select: { projectId: true } })
       : ncrId ? await prisma.nCR.findUnique({ where: { id: ncrId }, select: { projectId: true } }) : null;
     const allowed = parent && await canAccessProject(req.user!, parent.projectId);
-    if (!allowed) {
+    const mod = dailyReportId ? 'daily' : 'ncrs';
+    const role = parent ? await projectRoleOf(req.user!, parent.projectId) : null;
+    if (!allowed || !(can(role, mod, 'create') || can(role, mod, 'edit'))) {
       removeFile(req.file);
       res.status(400).json({ message: 'Photos must be attached to a daily report or NCR you can access' });
       return;
@@ -202,6 +204,26 @@ export const uploadPhoto = async (req: AuthRequest, res: Response): Promise<void
     removeFile(req.file);
     console.error('[uploadPhoto]', err);
     res.status(500).json({ message: 'Photo upload failed' });
+  }
+};
+
+/** DELETE /photos/:id — removes a daily-report or NCR photo (needs edit rights on that module in the project). */
+export const deletePhoto = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const photo = await prisma.photo.findUnique({
+      where: { id: req.params.id },
+      select: { id: true, url: true, dailyReportId: true, dailyReport: { select: { projectId: true } }, ncr: { select: { projectId: true } } },
+    });
+    const projectId = photo?.dailyReport?.projectId ?? photo?.ncr?.projectId;
+    if (!photo || !projectId || !(await canAccessProject(req.user!, projectId))) { res.status(404).json({ message: 'Photo not found' }); return; }
+    const mod = photo.dailyReportId ? 'daily' : 'ncrs';
+    const role = await projectRoleOf(req.user!, projectId);
+    if (!can(role, mod, 'edit')) { res.status(403).json({ message: 'You do not have permission to remove this photo' }); return; }
+    await prisma.photo.delete({ where: { id: photo.id } });
+    await discardStored(photo.url);
+    res.json({ message: 'Photo deleted' });
+  } catch {
+    res.status(500).json({ message: 'Failed to delete photo' });
   }
 };
 

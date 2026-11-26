@@ -82,6 +82,7 @@ export const documentsApi = {
 // Photos
 export const photosApi = {
   upload: (formData: FormData) => api.post('/photos', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  delete: (id: string) => api.delete(`/photos/${id}`),
 };
 
 // Plant & Equipment Register

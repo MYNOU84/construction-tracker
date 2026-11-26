@@ -12,12 +12,16 @@ import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Cell, Resp
 import { Plus, Shield, AlertTriangle, Edit2, Trash2 } from 'lucide-react';
 import type { Risk, NCR } from '../types';
 import TableExportButtons from '../components/reports/TableExportButtons';
+import PhotoAttachments from '../components/ui/PhotoAttachments';
+import { useProjectPermissions } from '../hooks/useProjectPermissions';
 
 const RISK_COLORS: Record<string, string> = { CRITICAL: '#ef4444', HIGH: '#f97316', MEDIUM: '#eab308', LOW: '#22c55e' };
 
 export default function RisksPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const qc = useQueryClient();
+  const { can } = useProjectPermissions(projectId);
+  const [editNCR, setEditNCR] = useState<NCR | null>(null);
   const [tab, setTab] = useState<'risks' | 'ncr'>('risks');
   const [showRiskModal, setShowRiskModal] = useState(false);
   const [showNCRModal, setShowNCRModal] = useState(false);
@@ -36,7 +40,7 @@ export default function RisksPage() {
   });
 
   const { register: regR, handleSubmit: handleR, reset: resetR, setValue: setRVal } = useForm<any>({ defaultValues: { probability: 3, impact: 3 } });
-  const { register: regN, handleSubmit: handleN, reset: resetN } = useForm<any>();
+  const { register: regN, handleSubmit: handleN, reset: resetN, setValue: setNVal } = useForm<any>();
 
   const createRisk = useMutation({
     mutationFn: (data: any) => editRisk ? risksApi.update(projectId!, editRisk.id, data) : risksApi.create(projectId!, data),
@@ -49,9 +53,25 @@ export default function RisksPage() {
   });
 
   const createNCR = useMutation({
-    mutationFn: (data: any) => ncrsApi.create(projectId!, data),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['ncrs', projectId] }); setShowNCRModal(false); resetN(); },
+    mutationFn: (data: any) => editNCR ? ncrsApi.update(projectId!, editNCR.id, data) : ncrsApi.create(projectId!, data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['ncrs', projectId] }); setShowNCRModal(false); resetN(); setEditNCR(null); },
   });
+
+  const deleteRisk = useMutation({
+    mutationFn: (id: string) => risksApi.delete(projectId!, id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['risks', projectId] }),
+  });
+  const deleteNCR = useMutation({
+    mutationFn: (id: string) => ncrsApi.delete(projectId!, id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['ncrs', projectId] }),
+  });
+  const openEditNCR = (n: NCR) => {
+    setEditNCR(n);
+    setNVal('title', n.title); setNVal('description', n.description); setNVal('area', n.area || '');
+    setNVal('discipline', n.discipline || ''); setNVal('severity', n.severity);
+    setNVal('raisedDate', String(n.raisedDate || '').split('T')[0]);
+    setShowNCRModal(true);
+  };
 
   const openEditRisk = (r: Risk) => {
     setEditRisk(r);
@@ -105,7 +125,7 @@ export default function RisksPage() {
           </div>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => { setShowNCRModal(true); resetN(); }} className="btn-secondary">
+          <button onClick={() => { setEditNCR(null); setShowNCRModal(true); resetN(); }} className="btn-secondary">
             <AlertTriangle size={16} /> New NCR
           </button>
           <button onClick={() => { setEditRisk(null); resetR(); setShowRiskModal(true); }} className="btn-primary">
@@ -215,9 +235,16 @@ export default function RisksPage() {
                           <td><StatusBadge status={r.status} /></td>
                           <td className="text-xs text-gray-500">{r.owner || '—'}</td>
                           <td>
-                            <button onClick={() => openEditRisk(r)} className="btn-secondary btn-sm">
-                              <Edit2 size={12} />
-                            </button>
+                            <div className="flex gap-1">
+                              <button onClick={() => openEditRisk(r)} className="btn-secondary btn-sm" title="Edit">
+                                <Edit2 size={12} />
+                              </button>
+                              {can('risks', 'delete') && (
+                                <button onClick={() => { if (window.confirm('Delete this risk?')) deleteRisk.mutate(r.id); }} className="btn-danger btn-sm" title="Delete">
+                                  <Trash2 size={12} />
+                                </button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       );
@@ -247,6 +274,7 @@ export default function RisksPage() {
                     <th>Severity</th>
                     <th>Status</th>
                     <th>Raised Date</th>
+                    <th>Photos</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -267,10 +295,24 @@ export default function RisksPage() {
                       </td>
                       <td><StatusBadge status={n.status} /></td>
                       <td className="text-xs">{formatDate(n.raisedDate)}</td>
+                      <td style={{ minWidth: 110 }}>
+                        <PhotoAttachments ncrId={n.id} photos={n.photos} compact canEdit={can('ncrs', 'edit')}
+                          onChanged={() => qc.invalidateQueries({ queryKey: ['ncrs', projectId] })} />
+                      </td>
                       <td>
-                        <button onClick={() => updateNCR(n, qc, projectId!)} className="btn-secondary btn-sm">
-                          <Edit2 size={12} />
-                        </button>
+                        <div className="flex gap-1">
+                          <button onClick={() => updateNCR(n, qc, projectId!)} className="btn-secondary btn-sm" title="Next status">
+                            Status
+                          </button>
+                          <button onClick={() => openEditNCR(n)} className="btn-secondary btn-sm" title="Edit">
+                            <Edit2 size={12} />
+                          </button>
+                          {can('ncrs', 'delete') && (
+                            <button onClick={() => { if (window.confirm('Delete this NCR?')) deleteNCR.mutate(n.id); }} className="btn-danger btn-sm" title="Delete">
+                              <Trash2 size={12} />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -337,11 +379,11 @@ export default function RisksPage() {
       </Modal>
 
       {/* NCR Modal */}
-      <Modal isOpen={showNCRModal} onClose={() => { setShowNCRModal(false); resetN(); }}
-        title="New Non-Conformance Report (NCR)"
+      <Modal isOpen={showNCRModal} onClose={() => { setShowNCRModal(false); resetN(); setEditNCR(null); }}
+        title={editNCR ? 'Edit Non-Conformance Report (NCR)' : 'New Non-Conformance Report (NCR)'}
         footer={
           <>
-            <button onClick={() => { setShowNCRModal(false); resetN(); }} className="btn-secondary">Cancel</button>
+            <button onClick={() => { setShowNCRModal(false); resetN(); setEditNCR(null); }} className="btn-secondary">Cancel</button>
             <button onClick={handleN(d => createNCR.mutate(d))} disabled={createNCR.isPending} className="btn-primary">
               {createNCR.isPending ? 'Saving...' : 'Save NCR'}
             </button>

@@ -16,7 +16,7 @@ import {
   getRisks, createRisk, updateRisk, deleteRisk,
   getNCRs, createNCR, updateNCR, deleteNCR,
 } from '../controllers/reportController';
-import { getDocuments, uploadDocument, deleteDocument, setDocumentStatus, uploadPhoto } from '../controllers/documentController';
+import { getDocuments, uploadDocument, deleteDocument, setDocumentStatus, uploadPhoto, deletePhoto } from '../controllers/documentController';
 import {
   getPlantEquipment, createPlantEquipment, updatePlantEquipment, deletePlantEquipment,
   getSiteResources, createSiteResource, updateSiteResource, deleteSiteResource,
@@ -130,6 +130,7 @@ router.post('/projects/:projectId/documents', ...P, can('documents', 'create'), 
 router.delete('/projects/:projectId/documents/:docId', ...P, child('document', 'docId'), deleteDocument);
 router.patch('/projects/:projectId/documents/:docId/status', ...PW, child('document', 'docId'), setDocumentStatus);
 router.post('/photos', authenticate, uploadPhotoMiddleware.single('file'), uploadPhoto);
+router.delete('/photos/:id', authenticate, deletePhoto);
 
 // Users
 const admin = [authenticate, authorize('ADMIN')];

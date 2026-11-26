@@ -7,6 +7,7 @@ import { parseJSON, translatePosition } from '../utils/helpers';
 import { PageLoader } from '../components/ui/LoadingSpinner';
 import { useProjectPermissions } from '../hooks/useProjectPermissions';
 import { useAuthStore } from '../store/authStore';
+import PhotoAttachments from '../components/ui/PhotoAttachments';
 import { Plus, Trash2, Save, Send, CheckCircle, XCircle, ChevronDown, ChevronUp, Sun, Cloud, CloudRain, Wind } from 'lucide-react';
 
 type Section = 'info' | 'manpower' | 'equipment' | 'materials' | 'tasks' | 'delays' | 'hse' | 'actions';
@@ -747,6 +748,14 @@ export default function DailyReportFormPage() {
             </div>
           )}
         </div>
+
+        {isEdit && (
+          <div className="card">
+            <h3 className="font-semibold text-gray-900 mb-3">Site Photos</h3>
+            <PhotoAttachments dailyReportId={reportId} photos={existing?.photos} canEdit={editable && can('daily', 'edit')}
+              onChanged={() => qc.invalidateQueries({ queryKey: ['daily-report', projectId, reportId] })} />
+          </div>
+        )}
 
         {/* Bottom Actions */}
         <div className="flex justify-end gap-3 pb-6">

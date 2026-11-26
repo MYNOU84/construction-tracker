@@ -1,19 +1,64 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { projectsApi } from '../api/endpoints';
+import { projectsApi, documentsApi } from '../api/endpoints';
 import { formatDate, formatCurrency } from '../utils/helpers';
 import { PageLoader } from '../components/ui/LoadingSpinner';
 import ProgressBar from '../components/ui/ProgressBar';
 import { exportPresentationPDF } from '../utils/exportPresentation';
 import {
   FileDown, Plus, Trash2, Save, Building2, Users, MapPin,
-  Layers, DollarSign, FileText, BarChart2, CheckCircle2, Clock, XCircle, AlertCircle
+  Layers, DollarSign, FileText, BarChart2, CheckCircle2, Clock, XCircle, AlertCircle, Upload, Download, Eye
 } from 'lucide-react';
 import type {
   ProjectPresentationData, ZoneEntry, IntervanantsRow,
   BillingEntry, WeightingEntry, PlanEntry
 } from '../types';
+
+/** Upload / preview / download / replace / remove for one plan's drawing (persistent storage through the Documents API). */
+function PlanFile({ plan, projectId, onChange }: { plan: PlanEntry; projectId: string; onChange: (patch: Partial<PlanEntry>) => void }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const pick = async (file?: File) => {
+    if (!file) return;
+    setBusy(true); setErr('');
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('name', ((plan.number ? plan.number + ' ' : '') + (plan.title || file.name.replace(/\.[^/.]+$/, ''))).trim());
+      fd.append('type', 'DRAWING');
+      fd.append('revision', plan.revision || '');
+      fd.append('status', 'SUBMITTED');
+      const res = await documentsApi.upload(projectId, fd);
+      if (plan.docId) await documentsApi.delete(projectId, plan.docId).catch(() => {});
+      onChange({ docId: res.data.id, fileUrl: res.data.fileUrl, fileName: res.data.fileName });
+    } catch (e: any) {
+      setErr(e?.response?.data?.error || e?.response?.data?.message || 'Upload failed');
+    } finally { setBusy(false); }
+  };
+  const remove = async () => {
+    if (!window.confirm('Remove this file from the plan?')) return;
+    if (plan.docId) await documentsApi.delete(projectId, plan.docId).catch(() => {});
+    onChange({ docId: undefined, fileUrl: undefined, fileName: undefined });
+  };
+  return (
+    <div className="flex items-center gap-1 whitespace-nowrap">
+      {plan.fileUrl && (
+        <>
+          <a href={plan.fileUrl} target="_blank" rel="noreferrer" className="btn-secondary btn-sm p-1" title={'Preview ' + (plan.fileName || '')} data-allow-demo><Eye size={12} /></a>
+          <a href={plan.fileUrl} download={plan.fileName} className="btn-secondary btn-sm p-1" title="Download" data-allow-demo><Download size={12} /></a>
+        </>
+      )}
+      <label className="btn-secondary btn-sm p-1 cursor-pointer" title={plan.fileUrl ? 'Replace file' : 'Upload file'}>
+        <Upload size={12} />
+        <input type="file" className="hidden" accept=".pdf,.png,.jpg,.jpeg,.dwg,.dxf,.doc,.docx,.xls,.xlsx" disabled={busy} onChange={e => { pick(e.target.files?.[0]); e.target.value = ''; }} />
+      </label>
+      {plan.fileUrl && <button type="button" onClick={remove} className="btn-danger btn-sm p-1" title="Remove file"><Trash2 size={12} /></button>}
+      {busy && <span className="text-xs" style={{ color: 'var(--text-3)' }}>…</span>}
+      {err && <span className="text-xs" style={{ color: '#dc2626' }}>{err}</span>}
+    </div>
+  );
+}
 
 const newId = () => Math.random().toString(36).slice(2);
 
@@ -455,14 +500,14 @@ export default function ProjectPresentationPage() {
             })}><Plus size={13} /> Plan</button>
           </div>
           <div className="table-container overflow-x-auto">
-            <table className="table" style={{ minWidth: 850 }}>
+            <table className="table" style={{ minWidth: 1000 }}>
               <thead><tr>
                 <th>Plan #</th><th>Title / Description</th><th>Revision</th>
-                <th>Format</th><th>Issued By</th><th>Date</th><th>Status</th><th>Remarks</th><th></th>
+                <th>Format</th><th>Issued By</th><th>Date</th><th>Status</th><th>Remarks</th><th>File</th><th></th>
               </tr></thead>
               <tbody>
                 {data.plans.length === 0 && (
-                  <tr><td colSpan={9} className="text-center py-8" style={{ color: 'var(--text-3)' }}>No plans registered</td></tr>
+                  <tr><td colSpan={10} className="text-center py-8" style={{ color: 'var(--text-3)' }}>No plans registered</td></tr>
                 )}
                 {data.plans.map((p, i) => {
                   const cfg = PLAN_CFG[p.status];
@@ -487,7 +532,13 @@ export default function ProjectPresentationPage() {
                         </select>
                       </td>
                       <td><input className="input" style={{ padding: '4px 8px', fontSize: 12 }} value={p.remarks} onChange={e => upd({ remarks: e.target.value })} /></td>
-                      <td><button onClick={() => update({ plans: data.plans.filter((_, j) => j !== i) })} className="btn-danger btn-sm p-1"><Trash2 size={12} /></button></td>
+                      <td>
+                        <PlanFile plan={p} projectId={projectId!} onChange={(patch) => {
+                          const arr = [...data.plans]; arr[i] = { ...arr[i], ...patch };
+                          update({ plans: arr }); saveMutation.mutate({ ...data, plans: arr });
+                        }} />
+                      </td>
+                      <td><button onClick={() => { if (p.docId) documentsApi.delete(projectId!, p.docId).catch(() => {}); update({ plans: data.plans.filter((_, j) => j !== i) }); }} className="btn-danger btn-sm p-1"><Trash2 size={12} /></button></td>
                     </tr>
                   );
                 })}

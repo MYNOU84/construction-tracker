@@ -480,6 +480,10 @@ export interface PlanEntry {
   date: string;
   status: 'DRAFT' | 'ISSUED' | 'APPROVED' | 'FOR_INFO' | 'SUPERSEDED';
   remarks: string;
+  /** Uploaded drawing file, kept in the Documents register (persistent file storage). */
+  docId?: string;
+  fileUrl?: string;
+  fileName?: string;
 }
 
 export interface ProjectPresentationData {

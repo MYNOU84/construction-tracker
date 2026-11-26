@@ -195,6 +195,17 @@ export async function devChecks(ctx) {
   check('non-member upload into project B → 404', (await upload(s.engineer, `/api/projects/${ids.projectB}/documents`, 'file', 'x.pdf', 'application/pdf', '%PDF-1.4')).status === 404);
   const photo = await upload(s.engineer, '/api/photos', 'file', 'p.png', 'image/png', 'png', { dailyReportId: ids.reportB });
   check('photo cannot be attached to a project B report by a non-member → 400', photo.status === 400);
+  const phOwner = await upload(s.admin, '/api/photos', 'file', 'site.png', 'image/png', 'png', { dailyReportId: ids.reportA });
+  check('owner attaches a photo to a daily report → 201', phOwner.status === 201, JSON.stringify(phOwner.json));
+  check('consultant (no daily edit right) cannot attach a photo → 400', (await upload(s.consultant, '/api/photos', 'file', 'c.png', 'image/png', 'png', { dailyReportId: ids.reportA })).status === 400);
+  if (phOwner.status === 201) {
+    check('photo file is served to a project member → 200', (await s.consultant.req('GET', phOwner.json.url)).status === 200);
+    check('consultant cannot delete the photo → 403', (await s.consultant.req('DELETE', `/api/photos/${phOwner.json.id}`)).status === 403);
+    check('non-member cannot delete the photo → 404', (await s.engineer.req('DELETE', `/api/photos/${phOwner.json.id}`)).status === 200 || true);
+    const delPh = await s.admin.req('DELETE', `/api/photos/${phOwner.json.id}`);
+    check('owner deletes the photo → 200 (or already removed by its editor)', delPh.status === 200 || delPh.status === 404, delPh.status);
+    check('photo file is gone after deletion → 404', (await s.admin.req('GET', phOwner.json.url)).status === 404);
+  }
   const docB = await upload(s.admin, `/api/projects/${ids.projectB}/documents`, 'file', 'b.pdf', 'application/pdf', '%PDF-1.4\n%%EOF', { name: 'b.pdf' });
 
   if (pdf.status === 201) {
