@@ -2,6 +2,21 @@ import { Response } from 'express';
 import prisma from '../lib/prisma';
 import { AuthRequest } from '../middleware/auth';
 import { getWeekNumber } from '../utils/helpers';
+import { getProjectRole } from '../middleware/access';
+import { can, seesInternal, ProjectRole } from '../config/permissions';
+
+const isManager = (role: ProjectRole | null) => role === 'OWNER' || role === 'PROJECT_MANAGER';
+
+/**
+ * Draft daily reports are internal: the project team (owner, project manager, site engineer) sees them,
+ * other roles see only their own drafts and every report that has been submitted.
+ */
+const dailyVisibility = (role: ProjectRole | null, userId: string) =>
+  seesInternal(role) ? {} : { OR: [{ status: { not: 'DRAFT' } }, { submittedBy: userId }] };
+
+/** Status a new daily report may start with: SUBMITTED only with the submit permission, never approved. */
+const initialDailyStatus = (role: ProjectRole | null, requested: unknown) =>
+  requested === 'SUBMITTED' && can(role, 'daily', 'submit') ? 'SUBMITTED' : 'DRAFT';
 
 // ─── Daily Reports ────────────────────────────────────────────────────────────
 
@@ -12,6 +27,7 @@ export const getDailyReports = async (req: AuthRequest, res: Response): Promise<
     const reports = await prisma.dailyReport.findMany({
       where: {
         projectId,
+        ...dailyVisibility(await getProjectRole(req), req.user!.userId),
         ...(from || to ? { reportDate: { gte: from ? new Date(String(from)) : undefined, lte: to ? new Date(String(to)) : undefined } } : {}),
         ...(status ? { status: String(status) } : {}),
       },
@@ -38,7 +54,10 @@ export const getDailyReport = async (req: AuthRequest, res: Response): Promise<v
         comments: { include: { user: { select: { id: true, name: true, role: true } } }, orderBy: { createdAt: 'asc' } },
       },
     });
-    if (!report) { res.status(404).json({ message: 'Report not found' }); return; }
+    const role = await getProjectRole(req);
+    if (!report || (!seesInternal(role) && report.status === 'DRAFT' && report.submittedBy !== req.user!.userId)) {
+      res.status(404).json({ message: 'Report not found' }); return;
+    }
     res.json(report);
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch report' });
@@ -49,6 +68,7 @@ export const createDailyReport = async (req: AuthRequest, res: Response): Promis
   try {
     const { projectId } = req.params;
     const data = req.body;
+    const status = initialDailyStatus(await getProjectRole(req), data.status);
 
     const reportDate = new Date(data.reportDate);
     const weekNum = getWeekNumber(reportDate);
@@ -83,9 +103,9 @@ export const createDailyReport = async (req: AuthRequest, res: Response): Promis
         incidents: data.incidents || 0,
         nearMisses: data.nearMisses || 0,
         toolboxTalks: data.toolboxTalks || 0,
-        status: data.status || 'DRAFT',
+        status,
         submittedBy: req.user!.userId,
-        submittedAt: data.status === 'SUBMITTED' ? new Date() : undefined,
+        submittedAt: status === 'SUBMITTED' ? new Date() : undefined,
       },
     });
     res.status(201).json(report);
@@ -97,7 +117,31 @@ export const createDailyReport = async (req: AuthRequest, res: Response): Promis
 export const updateDailyReport = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const data = req.body;
+    const role = await getProjectRole(req);
+    const current = await prisma.dailyReport.findUnique({ where: { id: req.params.reportId }, select: { status: true, submittedBy: true } });
+    if (!current) { res.status(404).json({ message: 'Report not found' }); return; }
+    const isAuthor = current.submittedBy === req.user!.userId;
+    const deny = (message: string) => { res.status(403).json({ message }); };
+    if (!seesInternal(role) && current.status === 'DRAFT' && !isAuthor) { res.status(404).json({ message: 'Report not found' }); return; }
+
+    // Content: managers always; other editors only their own report while it is a draft or was rejected.
+    const changesContent = Object.keys(data).some(k => k !== 'status');
+    if (changesContent && !(isManager(role) || (can(role, 'daily', 'edit') && isAuthor && ['DRAFT', 'REJECTED'].includes(current.status)))) {
+      deny('Only the author (while the report is a draft or rejected) or the project manager can edit this report'); return;
+    }
+    // Status workflow: DRAFT -> SUBMITTED by the author or a manager; SUBMITTED -> APPROVED / REJECTED by an approver.
+    if (data.status !== undefined && data.status !== current.status) {
+      const s = data.status;
+      if (s === 'SUBMITTED' || s === 'DRAFT') {
+        if (!(isManager(role) || (can(role, 'daily', 'submit') && isAuthor))) { deny('You cannot submit or withdraw this report'); return; }
+        if (s === 'DRAFT' && !isManager(role) && current.status === 'APPROVED') { deny('An approved report cannot be withdrawn'); return; }
+      } else if (s === 'APPROVED' || s === 'REJECTED') {
+        if (!can(role, 'daily', 'approve')) { deny('Your role on this project cannot approve or reject reports'); return; }
+        if (current.status === 'DRAFT') { deny('Only a submitted report can be approved or rejected'); return; }
+      } else { res.status(400).json({ message: 'Invalid report status' }); return; }
+    }
     const updateData: any = { ...data };
+    delete updateData.approvedAt; delete updateData.submittedAt; delete updateData.reportNumber;
     if (data.reportDate) updateData.reportDate = new Date(data.reportDate);
     if (data.manpowerData) {
       updateData.manpowerData = JSON.stringify(data.manpowerData);
@@ -113,7 +157,7 @@ export const updateDailyReport = async (req: AuthRequest, res: Response): Promis
     if (data.pendingActions) updateData.pendingActions = JSON.stringify(data.pendingActions);
     if (data.inspections) updateData.inspections = JSON.stringify(data.inspections);
     if (data.status === 'SUBMITTED') updateData.submittedAt = new Date();
-    if (data.status === 'APPROVED') { updateData.approvedBy = req.user!.userId; updateData.approvedAt = new Date(); }
+    if (data.status === 'APPROVED' || data.status === 'REJECTED') { updateData.approvedBy = req.user!.userId; updateData.approvedAt = new Date(); }
 
     const report = await prisma.dailyReport.update({ where: { id: req.params.reportId }, data: updateData });
     res.json(report);
@@ -124,6 +168,13 @@ export const updateDailyReport = async (req: AuthRequest, res: Response): Promis
 
 export const deleteDailyReport = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const role = await getProjectRole(req);
+    const current = await prisma.dailyReport.findUnique({ where: { id: req.params.reportId }, select: { status: true, submittedBy: true } });
+    if (!current) { res.status(404).json({ message: 'Report not found' }); return; }
+    const ownDraft = current.submittedBy === req.user!.userId && current.status === 'DRAFT' && can(role, 'daily', 'create');
+    if (!can(role, 'daily', 'delete') && !ownDraft) {
+      res.status(403).json({ message: 'Only the project manager, or the author of a draft, can delete this report' }); return;
+    }
     await prisma.dailyReport.delete({ where: { id: req.params.reportId } });
     res.json({ message: 'Report deleted' });
   } catch (err) {
@@ -133,8 +184,14 @@ export const deleteDailyReport = async (req: AuthRequest, res: Response): Promis
 
 export const addComment = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const content = typeof req.body?.content === 'string' ? req.body.content.trim().slice(0, 5000) : '';
+    if (!content) { res.status(400).json({ message: 'A comment is required' }); return; }
+    const report = await prisma.dailyReport.findUnique({ where: { id: req.params.reportId }, select: { status: true, submittedBy: true } });
+    if (!report || (!seesInternal(await getProjectRole(req)) && report.status === 'DRAFT' && report.submittedBy !== req.user!.userId)) {
+      res.status(404).json({ message: 'Report not found' }); return;
+    }
     const comment = await prisma.comment.create({
-      data: { content: req.body.content, userId: req.user!.userId, dailyReportId: req.params.reportId },
+      data: { content, userId: req.user!.userId, dailyReportId: req.params.reportId },
       include: { user: { select: { id: true, name: true, role: true } } },
     });
     res.status(201).json(comment);
@@ -584,6 +641,10 @@ export const createNCR = async (req: AuthRequest, res: Response): Promise<void> 
 export const updateNCR = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const data = req.body;
+    if (data.status === 'CLOSED' && !can(await getProjectRole(req), 'ncrs', 'approve')) {
+      const cur = await prisma.nCR.findUnique({ where: { id: req.params.ncrId }, select: { status: true } });
+      if (cur?.status !== 'CLOSED') { res.status(403).json({ message: 'Only the project manager or the consultant can close an NCR' }); return; }
+    }
     if (data.closedDate) data.closedDate = new Date(data.closedDate);
     const ncr = await prisma.nCR.update({ where: { id: req.params.ncrId }, data });
     res.json(ncr);

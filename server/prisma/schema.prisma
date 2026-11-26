@@ -275,6 +275,13 @@ model Document {
   revision    String?
   tags        String  @default("[]")
   uploadedBy  String
+  /// INTERNAL (not issued) | SUBMITTED | APPROVED | REJECTED. The column default keeps documents created
+  /// before this field existed official, as they were visible to every member; new uploads start INTERNAL.
+  status      String    @default("SUBMITTED")
+  submittedAt DateTime?
+  reviewedBy  String?
+  reviewedAt  DateTime?
+  reviewNote  String?
 
   project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   uploader  User     @relation(fields: [uploadedBy], references: [id])

@@ -1,5 +1,5 @@
 import api from './client';
-import type { Project, DailyReport, WeeklyReport, MonthlyReport, Activity, Milestone, Document, Risk, NCR, User, DashboardStats, ProjectAnalytics } from '../types';
+import type { Project, DailyReport, WeeklyReport, MonthlyReport, Activity, Milestone, Document, Risk, NCR, User, DashboardStats, ProjectAnalytics, ProjectPermissions, DocumentStatus } from '../types';
 
 // Auth
 export const authApi = {
@@ -24,6 +24,7 @@ export const projectsApi = {
   removeMember: (id: string, userId: string) => api.delete(`/projects/${id}/members/${userId}`),
   candidates: (id: string) => api.get<{ id: string; name: string; email: string; role: string; company?: string }[]>(`/projects/${id}/member-candidates`),
   exportAll: (id: string) => api.get(`/projects/${id}/export`),
+  permissions: (id: string) => api.get<ProjectPermissions>(`/projects/${id}/permissions`),
 };
 
 // Daily Reports
@@ -74,6 +75,8 @@ export const documentsApi = {
   list: (projectId: string, type?: string) => api.get<Document[]>(`/projects/${projectId}/documents`, { params: type ? { type } : {} }),
   upload: (projectId: string, formData: FormData) => api.post<Document>(`/projects/${projectId}/documents`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   delete: (projectId: string, docId: string) => api.delete(`/projects/${projectId}/documents/${docId}`),
+  setStatus: (projectId: string, docId: string, status: DocumentStatus, note?: string) =>
+    api.patch<Document>(`/projects/${projectId}/documents/${docId}/status`, { status, note }),
 };
 
 // Photos

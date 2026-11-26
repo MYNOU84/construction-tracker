@@ -291,7 +291,25 @@ export interface Document {
   tags: string[] | string;
   uploadedBy: string;
   uploader?: { id: string; name: string };
+  /** INTERNAL = working file of the project team; the other statuses are officially issued. */
+  status?: DocumentStatus;
+  submittedAt?: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  reviewNote?: string;
   createdAt: string;
+}
+
+export type DocumentStatus = 'INTERNAL' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';
+
+export type PermissionAction = 'view' | 'create' | 'edit' | 'delete' | 'submit' | 'review' | 'approve' | 'export';
+export type PermissionModule = 'project' | 'daily' | 'weekly' | 'monthly' | 'schedule' | 'risks' | 'ncrs' | 'plant' | 'resources' | 'documents';
+
+/** The caller's permissions on one project (GET /projects/:id/permissions). The server enforces the same matrix. */
+export interface ProjectPermissions {
+  role: string;
+  permissions: Record<PermissionModule, PermissionAction[]>;
+  seesInternal: boolean;
 }
 
 export interface Risk {

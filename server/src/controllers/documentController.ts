@@ -1,7 +1,12 @@
 import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import { AuthRequest } from '../middleware/auth';
-import { canAccessProject } from '../middleware/access';
+import { canAccessProject, getProjectRole, projectRoleOf } from '../middleware/access';
+import { can, seesInternal, ProjectRole } from '../config/permissions';
+
+/** Internal (unissued) documents: the project team sees them all, other roles only their own. */
+const documentVisibility = (role: ProjectRole | null, userId: string) =>
+  seesInternal(role) ? {} : { OR: [{ status: { not: 'INTERNAL' } }, { uploadedBy: userId }] };
 import { UPLOAD_ROOT, DOCUMENT_TYPES, PHOTO_TYPES, useDatabaseStorage, assignFileName } from '../middleware/upload';
 import { saveStoredFile, readStoredFile, deleteStoredFile } from '../lib/fileStore';
 import path from 'path';
@@ -55,7 +60,11 @@ export const getDocuments = async (req: AuthRequest, res: Response): Promise<voi
   try {
     const { type } = req.query;
     const docs = await prisma.document.findMany({
-      where: { projectId: req.params.projectId, ...(type ? { type: String(type) } : {}) },
+      where: {
+        projectId: req.params.projectId,
+        ...documentVisibility(await getProjectRole(req), req.user!.userId),
+        ...(type ? { type: String(type) } : {}),
+      },
       include: { uploader: { select: { id: true, name: true } } },
       orderBy: { createdAt: 'desc' },
     });
@@ -75,6 +84,8 @@ export const uploadDocument = async (req: AuthRequest, res: Response): Promise<v
     if (!req.file && body.fileUrl !== '#') { res.status(400).json({ message: 'No file uploaded' }); return; }
     const name = str(body.name, 200) || req.file?.originalname || str(body.fileName, 200);
     if (!name) { removeFile(req.file); res.status(400).json({ message: 'A document name is required' }); return; }
+    // New documents are internal unless issued officially at upload by someone allowed to submit.
+    const submit = body.status === 'SUBMITTED' && can(await getProjectRole(req), 'documents', 'submit');
     if (req.file) await persist(req.file, 'documents', DOCUMENT_TYPES);
     const doc = await prisma.document.create({
       data: {
@@ -89,6 +100,8 @@ export const uploadDocument = async (req: AuthRequest, res: Response): Promise<v
         revision: str(body.revision, 20),
         tags: parseTags(body.tags),
         uploadedBy: req.user!.userId,
+        status: submit ? 'SUBMITTED' : 'INTERNAL',
+        submittedAt: submit ? new Date() : null,
       },
     });
     res.status(201).json(doc);
@@ -102,12 +115,57 @@ export const uploadDocument = async (req: AuthRequest, res: Response): Promise<v
 export const deleteDocument = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const doc = await prisma.document.findFirst({ where: { id: req.params.docId, projectId: req.params.projectId } });
-    if (!doc) { res.status(404).json({ message: 'Document not found' }); return; }
+    const role = await getProjectRole(req);
+    const ownInternal = doc?.uploadedBy === req.user!.userId && doc?.status === 'INTERNAL';
+    if (!doc || (!seesInternal(role) && doc.status === 'INTERNAL' && !ownInternal)) { res.status(404).json({ message: 'Document not found' }); return; }
+    if (!can(role, 'documents', 'delete') && !ownInternal) {
+      res.status(403).json({ message: 'Only the project manager, or the uploader of an internal document, can delete it' }); return;
+    }
     await prisma.document.delete({ where: { id: doc.id } });
     await discardStored(doc.fileUrl);
     res.json({ message: 'Document deleted' });
   } catch {
     res.status(500).json({ message: 'Failed to delete document' });
+  }
+};
+
+/**
+ * PATCH /projects/:projectId/documents/:docId/status { status, note? }
+ *   INTERNAL -> SUBMITTED            uploader or project manager, with the submit permission (official issue)
+ *   SUBMITTED -> APPROVED | REJECTED approve permission (project manager, consultant, owner)
+ *   REJECTED -> SUBMITTED            resubmission, as for submitting
+ *   any -> INTERNAL                  project manager / owner only (withdraw an issue)
+ */
+export const setDocumentStatus = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const next = req.body?.status;
+    const note = str(req.body?.note, 1000);
+    const doc = await prisma.document.findFirst({ where: { id: req.params.docId, projectId: req.params.projectId } });
+    const role = await getProjectRole(req);
+    const isUploader = doc?.uploadedBy === req.user!.userId;
+    if (!doc || (!seesInternal(role) && doc.status === 'INTERNAL' && !isUploader)) { res.status(404).json({ message: 'Document not found' }); return; }
+    const manager = role === 'OWNER' || role === 'PROJECT_MANAGER';
+    let allowed = false;
+    if (next === 'SUBMITTED') allowed = ['INTERNAL', 'REJECTED'].includes(doc.status) && can(role, 'documents', 'submit') && (isUploader || manager);
+    else if (next === 'APPROVED' || next === 'REJECTED') allowed = doc.status === 'SUBMITTED' && can(role, 'documents', 'approve');
+    else if (next === 'INTERNAL') allowed = manager;
+    else { res.status(400).json({ message: 'Invalid document status' }); return; }
+    if (!allowed) { res.status(403).json({ message: 'Your role on this project cannot make this change' }); return; }
+    const reviewed = next === 'APPROVED' || next === 'REJECTED';
+    const updated = await prisma.document.update({
+      where: { id: doc.id },
+      data: {
+        status: next,
+        ...(next === 'SUBMITTED' ? { submittedAt: new Date(), reviewedBy: null, reviewedAt: null, reviewNote: null } : {}),
+        ...(reviewed ? { reviewedBy: req.user!.userId, reviewedAt: new Date(), reviewNote: note ?? null } : {}),
+        ...(next === 'INTERNAL' ? { submittedAt: null, reviewedBy: null, reviewedAt: null, reviewNote: null } : {}),
+      },
+      include: { uploader: { select: { id: true, name: true } } },
+    });
+    res.json(updated);
+  } catch (err) {
+    console.error('[setDocumentStatus]', err);
+    res.status(500).json({ message: 'Failed to update the document status' });
   }
 };
 
@@ -161,7 +219,11 @@ export const serveUpload = async (req: Request, res: Response): Promise<void> =>
   try {
     let projectId: string | undefined;
     if (kind === 'documents') {
-      projectId = (await prisma.document.findFirst({ where: { fileUrl: url }, select: { projectId: true } }))?.projectId;
+      const doc = await prisma.document.findFirst({ where: { fileUrl: url }, select: { projectId: true, status: true, uploadedBy: true } });
+      if (doc?.status === 'INTERNAL' && doc.uploadedBy !== user.userId && !seesInternal(await projectRoleOf(user, doc.projectId))) {
+        res.status(404).end(); return;
+      }
+      projectId = doc?.projectId;
     } else {
       const photo = await prisma.photo.findFirst({
         where: { url },

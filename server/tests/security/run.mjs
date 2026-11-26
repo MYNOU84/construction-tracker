@@ -90,7 +90,7 @@ db = new PrismaClient({ datasources: { db: { url: DATABASE_URL } } });
 // ─── Fixtures (generated, fictional) ─────────────────────────────────────────
 const ROLE = {
   admin: 'ADMIN', pm: 'PROJECT_MANAGER', engineer: 'SITE_ENGINEER', consultant: 'CONSULTANT',
-  viewer: 'CLIENT_VIEWER', lockme: 'SITE_ENGINEER', revoke: 'SITE_ENGINEER',
+  viewer: 'CLIENT_VIEWER', contractor: 'CONTRACTOR', lockme: 'SITE_ENGINEER', revoke: 'SITE_ENGINEER',
 };
 const acct = {};
 const ids = { users: {} };
@@ -116,6 +116,7 @@ await db.projectMember.createMany({
     { projectId: A.id, userId: ids.users.engineer, role: 'SITE_ENGINEER' },
     { projectId: A.id, userId: ids.users.consultant, role: 'CONSULTANT' },
     { projectId: A.id, userId: ids.users.viewer, role: 'CLIENT_VIEWER' },
+    { projectId: A.id, userId: ids.users.contractor, role: 'CONTRACTOR' },
     { projectId: B.id, userId: ids.users.consultant, role: 'CONSULTANT' },
   ],
 });

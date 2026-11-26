@@ -9,11 +9,17 @@ import Modal from '../components/ui/Modal';
 import { useForm } from 'react-hook-form';
 import {
   Files, Upload, Trash2, Download, Search, Filter, Eye,
-  FileText, Image, File, FileSpreadsheet, Loader2
+  FileText, Image, File, FileSpreadsheet, Loader2, Send, CheckCircle, XCircle
 } from 'lucide-react';
 import type { Document } from '../types';
 import TableExportButtons from '../components/reports/TableExportButtons';
 import { useAuthStore } from '../store/authStore';
+import { useProjectPermissions } from '../hooks/useProjectPermissions';
+import type { DocumentStatus } from '../types';
+
+const STATUS_BADGE: Record<string, string> = {
+  INTERNAL: 'badge-gray', SUBMITTED: 'badge-blue', APPROVED: 'badge-green', REJECTED: 'badge-red',
+};
 
 const DOC_ICONS: Record<string, any> = {
   PHOTO: Image, DRAWING: FileText, REPORT: FileSpreadsheet,
@@ -46,10 +52,19 @@ export default function DocumentsPage() {
     mutationFn: (data: any) => {
       const formData = new FormData();
       if (selectedFile) formData.append('file', selectedFile);
-      Object.entries(data).forEach(([k, v]) => formData.append(k, String(v)));
+      const { issue, ...fields } = data;
+      Object.entries(fields).forEach(([k, v]) => formData.append(k, String(v ?? '')));
+      formData.append('status', issue ? 'SUBMITTED' : 'INTERNAL');
       return documentsApi.upload(projectId!, formData);
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['documents', projectId] }); setShowUpload(false); reset(); setSelectedFile(null); },
+  });
+
+  // Internal documents stay with the project team until someone with the submit permission issues them.
+  const { can } = useProjectPermissions(projectId);
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: DocumentStatus }) => documentsApi.setStatus(projectId!, id, status),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['documents', projectId] }),
   });
 
   const deleteMutation = useMutation({
@@ -190,12 +205,28 @@ export default function DocumentsPage() {
                         {doc.revision && <span>Rev. {doc.revision}</span>}
                         {doc.fileSize && <span>{formatFileSize(doc.fileSize)}</span>}
                         <span>{formatDate(doc.createdAt)}</span>
+                        {doc.status && <span className={`badge ${STATUS_BADGE[doc.status] ?? 'badge-gray'}`}>{doc.status}</span>}
                       </div>
                     </div>
                     <div className="flex gap-1">
                       <a href={doc.fileUrl} target="_blank" rel="noreferrer" className="btn-secondary btn-sm">
                         <Eye size={12} />
                       </a>
+                      {doc.status === 'INTERNAL' && can('documents', 'submit') && (
+                        <button onClick={() => statusMutation.mutate({ id: doc.id, status: 'SUBMITTED' })} className="btn-secondary btn-sm" title="Submit officially">
+                          <Send size={12} />
+                        </button>
+                      )}
+                      {doc.status === 'SUBMITTED' && can('documents', 'approve') && (
+                        <>
+                          <button onClick={() => statusMutation.mutate({ id: doc.id, status: 'APPROVED' })} className="btn-secondary btn-sm" title="Approve">
+                            <CheckCircle size={12} />
+                          </button>
+                          <button onClick={() => statusMutation.mutate({ id: doc.id, status: 'REJECTED' })} className="btn-secondary btn-sm" title="Reject">
+                            <XCircle size={12} />
+                          </button>
+                        </>
+                      )}
                       <button onClick={() => { if (confirm('Delete document?')) deleteMutation.mutate(doc.id); }} className="btn-danger btn-sm">
                         <Trash2 size={12} />
                       </button>
@@ -263,6 +294,12 @@ export default function DocumentsPage() {
             <label className="label">Tags (comma-separated)</label>
             <input className="input" placeholder="floor plan, architecture, revision B" {...register('tags')} />
           </div>
+          {can('documents', 'submit') && (
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" {...register('issue')} />
+              Issue officially (visible to the consultant, contractor and client). Leave unticked to keep it internal.
+            </label>
+          )}
         </form>
       </Modal>
     </div>

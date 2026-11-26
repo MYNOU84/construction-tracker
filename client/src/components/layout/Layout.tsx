@@ -5,8 +5,23 @@ import Header from './Header';
 import Notice from '../ui/Notice';
 import { useUiStore } from '../../store/uiStore';
 import { useAuthStore } from '../../store/authStore';
-import { enableDemoReadOnly } from './demoReadOnly';
+import { enableDemoReadOnly, enableReadOnly, type ControlAction } from './demoReadOnly';
+import { useProjectPermissions } from '../../hooks/useProjectPermissions';
+import type { PermissionModule } from '../../types';
 import { Eye } from 'lucide-react';
+
+/** Project page (path segment after /projects/:id) → the permission modules its controls write to. */
+const PAGE_MODULES: Record<string, PermissionModule[]> = {
+  '': ['project'], presentation: ['project'], map: ['project'], performance: ['project'], hse: ['ncrs'],
+  'reports/daily': ['daily'], 'reports/weekly': ['weekly'], 'reports/monthly': ['monthly'],
+  schedule: ['schedule', 'documents'], risks: ['risks', 'ncrs'], plant: ['plant'], resources: ['resources'],
+  documents: ['documents'], contracts: ['documents'],
+};
+
+const projectPage = (pathname: string) => {
+  const m = /^\/projects\/([^/]+)(?:\/(reports\/[a-z]+|[a-z]+))?/.exec(pathname);
+  return m ? { projectId: m[1], modules: PAGE_MODULES[m[2] ?? ''] ?? ['project' as PermissionModule] } : null;
+};
 
 export default function Layout() {
   const { pathname } = useLocation();
@@ -15,6 +30,20 @@ export default function Layout() {
 
   // Public demo accounts are read-only (enforced by the server); hide write controls in the interface too.
   useEffect(() => (demo ? enableDemoReadOnly() : undefined), [demo]);
+
+  // On a project page, hide the controls the user's role on that project may not use (also enforced by the server).
+  const page = demo ? null : projectPage(pathname);
+  const { data: perms } = useProjectPermissions(page?.projectId);
+  const modulesKey = page?.modules.join(',') ?? '';
+  useEffect(() => {
+    if (!page) return undefined;
+    const modules = modulesKey.split(',') as PermissionModule[];
+    const has = (a: string) => modules.some(m => perms?.permissions?.[m]?.includes(a as never));
+    // Until the permissions arrive nothing that writes is shown.
+    const allowed = (a: ControlAction) => (a === 'write' ? has('create') || has('edit') : has(a));
+    return enableReadOnly(allowed);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page?.projectId, modulesKey, perms]);
 
   // Close the mobile drawer on navigation
   useEffect(() => { setSidebarOpen(false); }, [pathname, setSidebarOpen]);

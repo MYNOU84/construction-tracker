@@ -185,6 +185,8 @@ export default function ContractsSubmittalsPage() {
       formData.append('revision', data.revision || '');
       formData.append('description', data.description || '');
       formData.append('tags', JSON.stringify(tags));
+      // Contracts and submittals are official records.
+      formData.append('status', 'SUBMITTED');
       if (!file) {
         formData.append('fileUrl', '#');
         formData.append('fileName', data.name);
@@ -214,6 +216,7 @@ export default function ContractsSubmittalsPage() {
       formData.append('file', file);
       formData.append('name', file.name.replace(/\.[^/.]+$/, ''));
       formData.append('type', directType || 'CONTRACT');
+      formData.append('status', 'SUBMITTED');
       formData.append('fileUrl', '');
       formData.append('fileName', file.name);
       await documentsApi.upload(projectId, formData);

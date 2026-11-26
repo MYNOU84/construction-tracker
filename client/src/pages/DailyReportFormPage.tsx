@@ -5,7 +5,9 @@ import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { dailyReportsApi } from '../api/endpoints';
 import { parseJSON, translatePosition } from '../utils/helpers';
 import { PageLoader } from '../components/ui/LoadingSpinner';
-import { Plus, Trash2, Save, Send, ChevronDown, ChevronUp, Sun, Cloud, CloudRain, Wind } from 'lucide-react';
+import { useProjectPermissions } from '../hooks/useProjectPermissions';
+import { useAuthStore } from '../store/authStore';
+import { Plus, Trash2, Save, Send, CheckCircle, XCircle, ChevronDown, ChevronUp, Sun, Cloud, CloudRain, Wind } from 'lucide-react';
 
 type Section = 'info' | 'manpower' | 'equipment' | 'materials' | 'tasks' | 'delays' | 'hse' | 'actions';
 
@@ -74,6 +76,10 @@ const defaultManpower = [
   { position: 'Helper', type: 'DIRECT', company: '', np: 0, hours: 8 },
   { position: 'HSE Manager', type: 'INDIRECT', company: '', np: 0, hours: 8 },
 ];
+
+const STATUS_BADGE: Record<string, string> = {
+  DRAFT: 'badge-gray', SUBMITTED: 'badge-blue', APPROVED: 'badge-green', REJECTED: 'badge-red',
+};
 
 export default function DailyReportFormPage() {
   const { projectId, reportId } = useParams<{ projectId: string; reportId: string }>();
@@ -155,6 +161,22 @@ export default function DailyReportFormPage() {
     },
   });
 
+  // Review workflow: approvers (consultant, project manager, owner) approve or reject a submitted report.
+  const { can, role } = useProjectPermissions(projectId);
+  const me = useAuthStore(st => st.user?.id);
+  const reviewMutation = useMutation({
+    mutationFn: (status: 'APPROVED' | 'REJECTED') => dailyReportsApi.update(projectId!, reportId!, { status }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['daily-reports', projectId] });
+      qc.invalidateQueries({ queryKey: ['daily-report', projectId, reportId] });
+    },
+  });
+  const status: string = existing?.status ?? 'DRAFT';
+  const isManager = role === 'OWNER' || role === 'PROJECT_MANAGER';
+  // Content can change while the report is a draft (or was rejected), by its author; managers can always correct it.
+  const editable = !isEdit || isManager || (existing?.submittedBy === me && ['DRAFT', 'REJECTED'].includes(status));
+  const canReview = isEdit && status === 'SUBMITTED' && can('daily', 'approve');
+
   const onSave = (data: any) => saveMutation.mutate({ ...data, status: 'DRAFT' });
   const onSubmit = (data: any) => saveMutation.mutate({ ...data, status: 'SUBMITTED' });
 
@@ -179,15 +201,32 @@ export default function DailyReportFormPage() {
       <div className="section-header">
         <div>
           <h1 className="page-title">{isEdit ? 'Edit Daily Report' : 'New Daily Site Report'}</h1>
-          <p className="page-subtitle">Daily Site Report</p>
+          <p className="page-subtitle">
+            Daily Site Report
+            {isEdit && <span className={`badge ml-2 ${STATUS_BADGE[status] ?? 'badge-gray'}`}>{status}</span>}
+          </p>
         </div>
         <div className="flex gap-2">
-          <button onClick={handleSubmit(onSave)} disabled={saveMutation.isPending} className="btn-secondary">
-            <Save size={16} /> Save Draft
-          </button>
-          <button onClick={handleSubmit(onSubmit)} disabled={saveMutation.isPending} className="btn-primary">
-            <Send size={16} /> {saveMutation.isPending ? 'Submitting...' : 'Submit Report'}
-          </button>
+          {canReview && (
+            <>
+              <button type="button" onClick={() => reviewMutation.mutate('REJECTED')} disabled={reviewMutation.isPending} className="btn-secondary">
+                <XCircle size={16} /> Reject
+              </button>
+              <button type="button" onClick={() => reviewMutation.mutate('APPROVED')} disabled={reviewMutation.isPending} className="btn-primary">
+                <CheckCircle size={16} /> Approve
+              </button>
+            </>
+          )}
+          {editable && (
+            <>
+              <button onClick={handleSubmit(onSave)} disabled={saveMutation.isPending} className="btn-secondary">
+                <Save size={16} /> Save Draft
+              </button>
+              <button onClick={handleSubmit(onSubmit)} disabled={saveMutation.isPending} className="btn-primary">
+                <Send size={16} /> {saveMutation.isPending ? 'Submitting...' : 'Submit Report'}
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -714,12 +753,16 @@ export default function DailyReportFormPage() {
           <button type="button" onClick={() => navigate(`/projects/${projectId}/reports/daily`)} className="btn-secondary">
             Cancel
           </button>
-          <button type="button" onClick={handleSubmit(onSave)} disabled={saveMutation.isPending} className="btn-secondary">
-            <Save size={16} /> Save Draft
-          </button>
-          <button type="button" onClick={handleSubmit(onSubmit)} disabled={saveMutation.isPending} className="btn-primary">
-            <Send size={16} /> {saveMutation.isPending ? 'Submitting...' : 'Submit Report'}
-          </button>
+          {editable && (
+            <>
+              <button type="button" onClick={handleSubmit(onSave)} disabled={saveMutation.isPending} className="btn-secondary">
+                <Save size={16} /> Save Draft
+              </button>
+              <button type="button" onClick={handleSubmit(onSubmit)} disabled={saveMutation.isPending} className="btn-primary">
+                <Send size={16} /> {saveMutation.isPending ? 'Submitting...' : 'Submit Report'}
+              </button>
+            </>
+          )}
         </div>
       </form>
     </div>

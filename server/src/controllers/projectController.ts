@@ -2,6 +2,8 @@ import { Response } from 'express';
 import prisma from '../lib/prisma';
 import { windowStart } from '../lib/clock';
 import { AuthRequest } from '../middleware/auth';
+import { getProjectRole } from '../middleware/access';
+import { permissionsFor, seesInternal } from '../config/permissions';
 import { ROLES, DEMO_PROJECT_PREFIX, isDemoAccount, isDemoProjectId } from '../config/security';
 
 /** Projects a user may list: all for ADMIN, demo projects only for demo accounts, memberships otherwise. */
@@ -71,6 +73,8 @@ export const createProject = async (req: AuthRequest, res: Response): Promise<vo
     }
     const data = pickProjectFields(req.body);
     if (!data.name || !data.code) { res.status(400).json({ message: 'Project name and code are required' }); return; }
+    const missing = ['client', 'location', 'startDate', 'endDate'].filter(k => !data[k] || (data[k] instanceof Date && isNaN(data[k].getTime())));
+    if (missing.length) { res.status(400).json({ message: `Missing or invalid project fields: ${missing.join(', ')}` }); return; }
     const project = await prisma.project.create({
       data: {
         ...(data as any),
@@ -226,12 +230,17 @@ export const exportProject = async (req: AuthRequest, res: Response): Promise<vo
     const projectId = req.params.id;
     const user = { select: { id: true, name: true, email: true } } as const;
     const where = { projectId };
+    // The complete export holds what the caller may see: drafts and internal documents only for the project team.
+    const internal = seesInternal(await getProjectRole(req));
+    const me = req.user!.userId;
+    const dailyWhere = internal ? where : { projectId, OR: [{ status: { not: 'DRAFT' } }, { submittedBy: me }] };
+    const docWhere = internal ? where : { projectId, OR: [{ status: { not: 'INTERNAL' } }, { uploadedBy: me }] };
     const [project, members, activities, milestones, dailyReports, weeklyReports, monthlyReports, risks, ncrs, plant, resources, documents] = await Promise.all([
       prisma.project.findUnique({ where: { id: projectId } }),
       prisma.projectMember.findMany({ where, include: { user: { select: { name: true, email: true, role: true, company: true } } } }),
       prisma.activity.findMany({ where, orderBy: { plannedStart: 'asc' } }),
       prisma.milestone.findMany({ where, orderBy: { plannedDate: 'asc' } }),
-      prisma.dailyReport.findMany({ where, orderBy: { reportDate: 'asc' }, include: {
+      prisma.dailyReport.findMany({ where: dailyWhere, orderBy: { reportDate: 'asc' }, include: {
         author: user,
         photos: { select: { id: true, fileName: true, caption: true, location: true, url: true, takenAt: true } },
         comments: { select: { id: true, content: true, createdAt: true, user: { select: { name: true } } } },
@@ -242,7 +251,7 @@ export const exportProject = async (req: AuthRequest, res: Response): Promise<vo
       prisma.nCR.findMany({ where }),
       prisma.plantEquipment.findMany({ where }),
       prisma.siteResource.findMany({ where }),
-      prisma.document.findMany({ where, include: { uploader: user } }),
+      prisma.document.findMany({ where: docWhere, include: { uploader: user } }),
     ]);
     if (!project) { res.status(404).json({ message: 'Project not found' }); return; }
     res.setHeader('Cache-Control', 'no-store');
@@ -254,5 +263,16 @@ export const exportProject = async (req: AuthRequest, res: Response): Promise<vo
   } catch (err) {
     console.error('[exportProject]', err);
     res.status(500).json({ message: 'Failed to export project' });
+  }
+};
+
+/** GET /projects/:id/permissions: the caller's role on the project and its permission matrix (for the interface). */
+export const getMyPermissions = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const role = await getProjectRole(req);
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ role, permissions: permissionsFor(role), seesInternal: seesInternal(role) });
+  } catch {
+    res.status(500).json({ message: 'Failed to load permissions' });
   }
 };

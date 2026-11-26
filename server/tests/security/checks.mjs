@@ -187,7 +187,7 @@ export async function devChecks(ctx) {
   check('reject .svg', (await upload(s.admin, docsA, 'file', 'x.svg', 'image/svg+xml', '<svg/>')).status === 400);
   check('reject .pdf sent with an HTML MIME type', (await upload(s.admin, docsA, 'file', 'x.pdf', 'text/html', 'x')).status === 400);
   check('reject .exe', (await upload(s.admin, docsA, 'file', 'x.exe', 'application/octet-stream', 'MZ')).status === 400);
-  const pdf = await upload(s.engineer, docsA, 'file', 'security-test.pdf', 'application/pdf', '%PDF-1.4\n%%EOF', { name: 'security-test.pdf', tags: '["a","b"]' });
+  const pdf = await upload(s.engineer, docsA, 'file', 'security-test.pdf', 'application/pdf', '%PDF-1.4\n%%EOF', { name: 'security-test.pdf', tags: '["a","b"]', status: 'SUBMITTED' });
   check('member uploads a .pdf', pdf.status === 201, JSON.stringify(pdf.json));
   check('stored under a random name, tags parsed', pdf.status === 201 && /^\/uploads\/documents\/[0-9a-f-]{36}\.pdf$/.test(pdf.json.fileUrl) && pdf.json.tags === '["a","b"]', JSON.stringify(pdf.json));
   const meta = await s.admin.req('POST', docsA, { name: 'Metadata only', fileUrl: '#', type: 'CONTRACT' });
@@ -209,6 +209,145 @@ export async function devChecks(ctx) {
   }
   if (meta.status === 201) await s.admin.req('DELETE', `${docsA}/${meta.json.id}`);
   if (docB.status === 201) await s.admin.req('DELETE', `/api/projects/${ids.projectB}/documents/${docB.json.id}`);
+
+  group('permissions');
+  for (const k of ['viewer', 'contractor']) s[k] = (await login(base, acct[k])).s;
+  const P = `/api/projects/${ids.projectA}`;
+  const perms = async (k) => (await s[k].req('GET', `${P}/permissions`)).json;
+  const pa = await perms('admin'), pv = await perms('viewer'), pe = await perms('engineer');
+  check('owner (ADMIN) → role OWNER with every permission', pa.role === 'OWNER' && pa.permissions?.daily?.includes('approve') && pa.seesInternal === true, JSON.stringify(pa));
+  check('client viewer → view/export only, no internal access', pv.role === 'CLIENT_VIEWER' && pv.permissions?.risks?.join() === 'view,export' && pv.seesInternal === false, JSON.stringify(pv));
+  check('site engineer → may submit but not approve daily reports', pe.permissions?.daily?.includes('submit') && !pe.permissions?.daily?.includes('approve'), JSON.stringify(pe));
+  check('permissions of a non-member project → 404', (await s.engineer.req('GET', `/api/projects/${ids.projectB}/permissions`)).status === 404);
+
+  // Client viewer: read and export only.
+  check('viewer reads risks → 200', (await s.viewer.req('GET', `${P}/risks`)).status === 200);
+  check('viewer exports the project → 200', (await s.viewer.req('GET', `${P}/export`)).status === 200);
+  for (const [m, p, b] of [
+    ['POST', `${P}/risks`, { title: 'x', description: 'x' }],
+    ['PUT', `${P}/risks/${ids.riskA}`, { title: 'viewer-hijack' }],
+    ['DELETE', `${P}/risks/${ids.riskA}`],
+    ['POST', `${P}/reports/daily`, { reportDate: '2026-02-01' }],
+    ['POST', `${P}/reports/weekly/generate`, { weekNumber: 5, year: 2026 }],
+    ['POST', `${P}/reports/monthly/generate`, { month: 2, year: 2026 }],
+    ['POST', `${P}/documents`, { name: 'x', fileUrl: '#', type: 'CONTRACT' }],
+  ]) {
+    const r = await s.viewer.req(m, p, b);
+    check(`viewer ${m} ${p.replace(P, ':A').replace(ids.riskA, ':risk')} → 403`, r.status === 403, `status=${r.status}`);
+  }
+  check('risk A unchanged by viewer', (await db.risk.findUnique({ where: { id: ids.riskA } }))?.title === 'Fixture risk A');
+
+  // Contractor: may raise a risk but not edit it.
+  const cr = await s.contractor.req('POST', `${P}/risks`, { title: 'Contractor risk', description: 'x' });
+  check('contractor creates a risk → 201', cr.status === 201, `status=${cr.status}`);
+  if (cr.status === 201) {
+    check('contractor edits a risk → 403', (await s.contractor.req('PUT', `${P}/risks/${cr.json.id}`, { title: 'y' })).status === 403);
+    check('contractor deletes a risk → 403', (await s.contractor.req('DELETE', `${P}/risks/${cr.json.id}`)).status === 403);
+    await s.admin.req('DELETE', `${P}/risks/${cr.json.id}`);
+  }
+  check('consultant generates a weekly report → 403', (await s.consultant.req('POST', `${P}/reports/weekly/generate`, { weekNumber: 6, year: 2026 })).status === 403);
+
+  // Daily report workflow: draft → submitted → approved.
+  const draft = await s.engineer.req('POST', `${P}/reports/daily`, { reportDate: '2026-02-02', status: 'DRAFT' });
+  const sub = await s.engineer.req('POST', `${P}/reports/daily`, { reportDate: '2026-02-03', status: 'SUBMITTED' });
+  check('engineer creates a draft and a submitted report', draft.status === 201 && draft.json.status === 'DRAFT' && sub.status === 201 && sub.json.status === 'SUBMITTED', `${draft.status}/${sub.status}`);
+  const vForced = await s.viewer.req('POST', `${P}/reports/daily`, { reportDate: '2026-02-04', status: 'APPROVED' });
+  check('viewer cannot create an approved report', vForced.status === 403);
+  const cForced = await s.contractor.req('POST', `${P}/reports/daily`, { reportDate: '2026-02-05', status: 'APPROVED' });
+  check('status APPROVED on create is not honoured', cForced.status === 201 && cForced.json.status !== 'APPROVED', JSON.stringify(cForced.json?.status));
+  if (draft.status === 201 && sub.status === 201) {
+    const D = `${P}/reports/daily/${draft.json.id}`, S = `${P}/reports/daily/${sub.json.id}`;
+    const vList = (await s.viewer.req('GET', `${P}/reports/daily`)).json;
+    const vIds = new Set((Array.isArray(vList) ? vList : vList.reports || vList.data || []).map(r => r.id));
+    check('viewer list hides internal drafts, shows submitted', !vIds.has(draft.json.id) && vIds.has(sub.json.id), JSON.stringify([...vIds]));
+    check('viewer GET internal draft → 404', (await s.viewer.req('GET', D)).status === 404);
+    check('consultant GET internal draft → 404', (await s.consultant.req('GET', D)).status === 404);
+    check('PM GET internal draft → 200', (await s.pm.req('GET', D)).status === 200);
+    const vExport = (await s.viewer.req('GET', `${P}/export`)).json;
+    check('viewer export excludes internal drafts', Array.isArray(vExport.dailyReports) && !vExport.dailyReports.some(r => r.id === draft.json.id));
+    check('viewer comment → 403', (await s.viewer.req('POST', `${S}/comments`, { content: 'x' })).status === 403);
+    check('consultant review comment → 201', (await s.consultant.req('POST', `${S}/comments`, { content: 'Reviewed' })).status === 201);
+    check('engineer approves own report → 403', (await s.engineer.req('PUT', S, { status: 'APPROVED' })).status === 403);
+    check('contractor approves → 403', (await s.contractor.req('PUT', S, { status: 'APPROVED' })).status === 403);
+    check('consultant approves a draft → refused', (await s.consultant.req('PUT', D, { status: 'APPROVED' })).status >= 400);
+    const ap = await s.consultant.req('PUT', S, { status: 'APPROVED' });
+    const apRow = await db.dailyReport.findUnique({ where: { id: sub.json.id } });
+    check('consultant approves a submitted report → 200, approver recorded', ap.status === 200 && apRow.status === 'APPROVED' && apRow.approvedBy === ids.users.consultant, `status=${ap.status}`);
+    check('engineer edits an approved report → 403', (await s.engineer.req('PUT', S, { generalSummary: 'changed' })).status === 403);
+    check('viewer deletes a report → 403', (await s.viewer.req('DELETE', S)).status === 403);
+    await s.admin.req('DELETE', D); await s.admin.req('DELETE', S);
+  }
+  if (cForced.status === 201) await s.admin.req('DELETE', `${P}/reports/daily/${cForced.json.id}`);
+
+  // Documents: internal working files vs officially submitted documents.
+  const idoc = await upload(s.engineer, `${P}/documents`, 'file', 'internal.pdf', 'application/pdf', '%PDF-1.4\n%%EOF', { name: 'internal.pdf' });
+  check('upload without status is INTERNAL', idoc.status === 201 && idoc.json.status === 'INTERNAL', JSON.stringify(idoc.json?.status));
+  const vdoc = await upload(s.viewer, `${P}/documents`, 'file', 'v.pdf', 'application/pdf', '%PDF-1.4');
+  check('viewer upload → 403', vdoc.status === 403);
+  if (idoc.status === 201) {
+    const docUrl = `${P}/documents/${idoc.json.id}`;
+    const listed = async (k) => ((await s[k].req('GET', `${P}/documents`)).json || []).some(d => d.id === idoc.json.id);
+    check('internal document hidden from viewer and consultant, visible to PM', !(await listed('viewer')) && !(await listed('consultant')) && (await listed('pm')));
+    check('internal document file → 404 for viewer', (await s.viewer.req('GET', idoc.json.fileUrl)).status === 404);
+    { const r = await s.viewer.req('PATCH', `${docUrl}/status`, { status: 'SUBMITTED' }); check('viewer cannot issue it (403/404)', r.status === 403 || r.status === 404, `status=${r.status}`); }
+    check('engineer cannot approve an internal document', (await s.engineer.req('PATCH', `${docUrl}/status`, { status: 'APPROVED' })).status >= 400);
+    const issued = await s.engineer.req('PATCH', `${docUrl}/status`, { status: 'SUBMITTED' });
+    check('engineer submits it officially → 200', issued.status === 200 && issued.json.status === 'SUBMITTED', `status=${issued.status}`);
+    check('submitted document visible to viewer, file served', (await listed('viewer')) && (await s.viewer.req('GET', idoc.json.fileUrl)).status === 200);
+    check('engineer approves → 403', (await s.engineer.req('PATCH', `${docUrl}/status`, { status: 'APPROVED' })).status === 403);
+    const appr = await s.consultant.req('PATCH', `${docUrl}/status`, { status: 'APPROVED', note: 'OK' });
+    check('consultant approves → 200, reviewer recorded', appr.status === 200 && appr.json.status === 'APPROVED' && appr.json.reviewedBy === ids.users.consultant, JSON.stringify(appr.json));
+    check('viewer deletes it → 403', (await s.viewer.req('DELETE', docUrl)).status === 403);
+    check('engineer deletes an official document → 403', (await s.engineer.req('DELETE', docUrl)).status === 403);
+    await s.admin.req('DELETE', docUrl);
+  }
+
+  group('owner-workflow');
+  {
+    check('project without required fields → 400 (not 500)', (await s.admin.req('POST', '/api/projects', { name: 'Incomplete', code: `INC-${Date.now()}` })).status === 400);
+    // The owner (system ADMIN) runs several real projects end to end. Test projects are removed afterwards.
+    const created = [];
+    for (const n of [1, 2]) {
+      const r = await s.admin.req('POST', '/api/projects', { name: `Owner workflow ${n}`, code: `OWN-${n}-${Date.now()}`, client: 'Test client', location: 'Test site', startDate: '2026-01-01', endDate: '2026-12-31', status: 'ACTIVE' });
+      check(`owner creates project ${n} → 201`, r.status === 201, r.status);
+      if (r.status === 201) created.push(r.json);
+    }
+    const again = await login(base, acct.admin);
+    const listed = (await again.s.req('GET', '/api/projects')).json;
+    check('both projects persist and are listed in a new session', Array.isArray(listed) && created.every(c => listed.some(p => p.id === c.id)));
+    if (created.length === 2) {
+      const [p1, p2] = created;
+      const P1 = `/api/projects/${p1.id}`;
+      const ed = await s.admin.req('PUT', P1, { name: 'Owner workflow 1 (renamed)', progress: 25 });
+      check('owner edits a project → 200', ed.status === 200 && ed.json.name === 'Owner workflow 1 (renamed)', ed.status);
+      const perm = (await s.admin.req('GET', `${P1}/permissions`)).json;
+      check('owner role on own project is OWNER with every permission', perm?.role === 'OWNER' && perm.permissions?.daily?.includes('approve') && perm.seesInternal === true);
+      const add = await s.admin.req('POST', `${P1}/members`, { userId: ids.users.viewer, role: 'CLIENT_VIEWER' });
+      check('owner assigns a client viewer to project 1 → 201', add.status === 201 || add.status === 200, add.status);
+      check('assigned viewer reads project 1', (await s.viewer.req('GET', P1)).status === 200);
+      check('viewer cannot see project 2 (isolation) → 404', (await s.viewer.req('GET', `/api/projects/${p2.id}`)).status === 404);
+      const vp = (await s.viewer.req('GET', `${P1}/permissions`)).json;
+      check('viewer permissions on project 1 are read/export only', vp?.role === 'CLIENT_VIEWER' && !vp.permissions?.daily?.includes('create') && vp.permissions?.daily?.includes('export'));
+      const dr = await s.admin.req('POST', `${P1}/reports/daily`, { reportDate: '2026-03-02', status: 'SUBMITTED', weather: 'SUNNY', workDescription: 'Formwork level 1' });
+      check('owner records a daily report → 201', dr.status === 201, dr.status);
+      const wk = await s.admin.req('POST', `${P1}/reports/weekly/generate`, { weekNumber: 10, year: 2026 });
+      check('owner generates a weekly report → 201', wk.status === 201 || wk.status === 200, wk.status);
+      const mo = await s.admin.req('POST', `${P1}/reports/monthly/generate`, { month: 3, year: 2026 });
+      check('owner generates a monthly report → 201', mo.status === 201 || mo.status === 200, mo.status);
+      check('weekly report listed', ((await s.admin.req('GET', `${P1}/reports/weekly`)).json || []).length >= 1);
+      check('monthly report listed', ((await s.admin.req('GET', `${P1}/reports/monthly`)).json || []).length >= 1);
+      const ex = await s.admin.req('GET', `${P1}/export`);
+      const exJson = ex.json && typeof ex.json === 'object' ? ex.json : {};
+      const keys = Object.keys(exJson).join(',');
+      check('owner exports all project data → 200 with reports', ex.status === 200 && /daily/i.test(keys) && /weekly/i.test(keys) && /monthly/i.test(keys), keys);
+      const ar = await s.admin.req('PUT', `/api/projects/${p2.id}`, { status: 'ARCHIVED' });
+      check('owner archives project 2 → 200', ar.status === 200 && ar.json.status === 'ARCHIVED', ar.status);
+      check('owner lists users (user management) → 200', (await s.admin.req('GET', '/api/users')).status === 200);
+    }
+    for (const c of created) await s.admin.req('DELETE', `/api/projects/${c.id}`);
+    const left = (await s.admin.req('GET', '/api/projects')).json;
+    check('test projects removed after verification', Array.isArray(left) && !created.some(c => left.some(p => p.id === c.id)));
+  }
 
   group('revocation');
   const { s: rs, r: rl } = await login(base, acct.revoke);

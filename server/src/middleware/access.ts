@@ -13,6 +13,7 @@ import { Response, NextFunction } from 'express';
 import prisma from '../lib/prisma';
 import { AuthRequest } from './auth';
 import { isDemoProjectId } from '../config/security';
+import { can, Module, Action, ProjectRole } from '../config/permissions';
 
 const projectIdFrom = (req: AuthRequest): string | undefined =>
   req.params.projectId || req.params.id;
@@ -64,6 +65,42 @@ export const requireProjectManager = async (req: AuthRequest, res: Response, nex
     res.status(500).json({ message: 'Access check failed' });
   }
 };
+
+/**
+ * The caller's role on a project: OWNER for the (non-demo) system administrator, otherwise the
+ * ProjectMember role, or null for non-members.
+ */
+export const projectRoleOf = async (
+  user: { userId: string; role: string; demo?: boolean }, projectId: string,
+): Promise<ProjectRole | null> => {
+  if (user.role === 'ADMIN' && !user.demo) return 'OWNER';
+  const m = await prisma.projectMember.findUnique({
+    where: { userId_projectId: { userId: user.userId, projectId } }, select: { role: true },
+  });
+  return (m?.role as ProjectRole) ?? null;
+};
+
+/** Role on the project in the URL, resolved once per request (after requireProjectAccess). */
+export const getProjectRole = async (req: AuthRequest): Promise<ProjectRole | null> => {
+  const r = req as AuthRequest & { projectRole?: ProjectRole | null };
+  if (r.projectRole === undefined) {
+    const projectId = projectIdFrom(req);
+    r.projectRole = req.user && projectId ? await projectRoleOf(req.user, projectId) : null;
+  }
+  return r.projectRole;
+};
+
+/** Enforces the permission matrix (config/permissions.ts) for the project in the URL. */
+export const requirePermission = (module: Module, action: Action) =>
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const role = await getProjectRole(req);
+      if (role && can(role, module, action)) { next(); return; }
+      res.status(403).json({ message: 'Your role on this project does not allow this action', permission: `${module}:${action}` });
+    } catch {
+      res.status(500).json({ message: 'Access check failed' });
+    }
+  };
 
 type ChildModel =
   | 'dailyReport' | 'weeklyReport' | 'monthlyReport' | 'activity' | 'milestone'
