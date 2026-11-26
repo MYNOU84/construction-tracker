@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { openFile } from '../components/ui/FileViewer';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
@@ -9,7 +10,7 @@ import ProgressBar from '../components/ui/ProgressBar';
 import Modal from '../components/ui/Modal';
 import { PageLoader } from '../components/ui/LoadingSpinner';
 import EmptyState from '../components/ui/EmptyState';
-import { Plus, Calendar, Flag, Edit2, Upload, Download, FileText, Copy, CheckCircle, BarChart2, FileStack, Trash2 } from 'lucide-react';
+import { Plus, Calendar, Flag, Edit2, Upload, Download, FileText, Copy, CheckCircle, BarChart2, FileStack, Trash2, Eye } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine
 } from 'recharts';
@@ -409,9 +410,14 @@ export default function SchedulePage() {
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       {doc.fileUrl && (
-                        <a href={doc.fileUrl} target="_blank" rel="noreferrer" className="btn-secondary btn-sm" title="Télécharger">
+                        <>
+                        <button type="button" onClick={() => openFile(doc.fileUrl, doc.fileName)} className="btn-secondary btn-sm" title="View" data-allow-demo>
+                          <Eye size={13} />
+                        </button>
+                        <a href={doc.fileUrl} download={doc.fileName} className="btn-secondary btn-sm" title="Download" data-allow-demo>
                           <Download size={13} />
                         </a>
+                        </>
                       )}
                       <button onClick={() => deletePlanDoc(doc.id)} className="btn-secondary btn-sm text-red-400 hover:text-red-600" title="Delete">
                         <Trash2 size={13} />

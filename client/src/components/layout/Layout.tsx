@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { FileViewerHost } from '../ui/FileViewer';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
@@ -79,6 +80,7 @@ export default function Layout() {
         <main className="flex-1 p-4 sm:p-6 xl:p-8 min-w-0">
           <div className="mx-auto w-full max-w-[1600px]">
             <Outlet />
+            <FileViewerHost />
           </div>
         </main>
       </div>

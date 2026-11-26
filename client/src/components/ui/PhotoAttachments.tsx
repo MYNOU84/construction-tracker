@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { Camera, Trash2 } from 'lucide-react';
 import { photosApi } from '../../api/endpoints';
+import { openFile } from './FileViewer';
 import type { Photo } from '../../types';
 
 interface Props {
@@ -47,7 +48,7 @@ export default function PhotoAttachments({ dailyReportId, ncrId, photos = [], ca
     <div className="flex flex-wrap items-center gap-2">
       {photos.map(p => (
         <div key={p.id} className="relative group">
-          <a href={p.url} target="_blank" rel="noreferrer" data-allow-demo title={p.fileName}>
+          <a href={p.url} onClick={e => { e.preventDefault(); openFile(p.url, p.fileName); }} data-allow-demo title={p.fileName}>
             <img src={p.url} alt={p.fileName} className="rounded border object-cover" style={{ width: compact ? 36 : 72, height: compact ? 36 : 72 }} />
           </a>
           {canEdit && (

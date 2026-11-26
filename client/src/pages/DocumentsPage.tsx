@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { openFile } from '../components/ui/FileViewer';
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { documentsApi } from '../api/endpoints';
@@ -209,8 +210,11 @@ export default function DocumentsPage() {
                       </div>
                     </div>
                     <div className="flex gap-1">
-                      <a href={doc.fileUrl} target="_blank" rel="noreferrer" className="btn-secondary btn-sm">
+                      <button type="button" onClick={() => openFile(doc.fileUrl, doc.fileName)} className="btn-secondary btn-sm" title="View" data-allow-demo>
                         <Eye size={12} />
+                      </button>
+                      <a href={doc.fileUrl} download={doc.fileName} className="btn-secondary btn-sm" title="Download" data-allow-demo>
+                        <Download size={12} />
                       </a>
                       {doc.status === 'INTERNAL' && can('documents', 'submit') && (
                         <button onClick={() => statusMutation.mutate({ id: doc.id, status: 'SUBMITTED' })} className="btn-secondary btn-sm" title="Submit officially">

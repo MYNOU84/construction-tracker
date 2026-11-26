@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
+import { openFile } from '../components/ui/FileViewer';
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { documentsApi } from '../api/endpoints';
@@ -436,10 +437,16 @@ export default function ContractsSubmittalsPage() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1 justify-end">
                         {doc.fileUrl && doc.fileUrl !== '#' && (
-                          <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer"
+                          <>
+                          <button type="button" onClick={() => openFile(doc.fileUrl, doc.fileName)} data-allow-demo
+                            className="p-1.5 rounded text-gray-400 hover:text-blue-500 hover:bg-blue-50 transition-colors" title="View">
+                            <Eye size={15} />
+                          </button>
+                          <a href={doc.fileUrl} download={doc.fileName} data-allow-demo
                             className="p-1.5 rounded text-gray-400 hover:text-blue-500 hover:bg-blue-50 transition-colors" title="Download">
                             <Download size={15} />
                           </a>
+                          </>
                         )}
                         <button onClick={() => setConfirmDeleteId(doc.id)}
                           className="p-1.5 rounded text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors" title="Delete">

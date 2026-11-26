@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { openFile } from '../components/ui/FileViewer';
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { projectsApi, documentsApi } from '../api/endpoints';
@@ -45,7 +46,7 @@ function PlanFile({ plan, projectId, onChange }: { plan: PlanEntry; projectId: s
     <div className="flex items-center gap-1 whitespace-nowrap">
       {plan.fileUrl && (
         <>
-          <a href={plan.fileUrl} target="_blank" rel="noreferrer" className="btn-secondary btn-sm p-1" title={'Preview ' + (plan.fileName || '')} data-allow-demo><Eye size={12} /></a>
+          <button type="button" onClick={() => openFile(plan.fileUrl!, plan.fileName)} className="btn-secondary btn-sm p-1" title={'View ' + (plan.fileName || '')} data-allow-demo><Eye size={12} /></button>
           <a href={plan.fileUrl} download={plan.fileName} className="btn-secondary btn-sm p-1" title="Download" data-allow-demo><Download size={12} /></a>
         </>
       )}
